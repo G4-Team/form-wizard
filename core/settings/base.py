@@ -10,6 +10,7 @@ env.read_env(str(BASE_DIR / ".env"))
 LOCAL_APPS = [
     "api.apps.ApiConfig",
     "accounts.apps.AccountsConfig",
+    "forms.apps.FormsConfig",
 ]
 
 THIRD_PARTY_APPS = [

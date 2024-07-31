@@ -51,3 +51,27 @@ class RegisterUserSerializer(serializers.ModelSerializer):
             raise TypeError(msg)
 
         return instance
+
+    def update(self, instance, validated_data):
+        if "password" in validated_data:
+            instance.set_password(validated_data.pop("password"))
+        return super().update(instance, validated_data)
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "email",
+            "phone",
+            "first_name",
+            "last_name",
+            "email_verified",
+        ]
+        read_only_fields = [
+            "email",
+            "phone",
+            "first_name",
+            "last_name",
+            "email_verified",
+        ]

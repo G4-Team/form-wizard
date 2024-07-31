@@ -2,7 +2,7 @@ import traceback
 
 from rest_framework import serializers
 
-from accounts.models import User
+from accounts.models import OtpVerificationCode, User
 
 
 class RegisterUserSerializer(serializers.ModelSerializer):
@@ -75,3 +75,51 @@ class ProfileSerializer(serializers.ModelSerializer):
             "last_name",
             "email_verified",
         ]
+
+
+class OtpPhoneSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=11, min_length=11, allow_blank=False)
+
+    def validate_phone(self, value):
+        if not value.startswith("09"):
+            raise serializers.ValidationError("please enter a valid phone number")
+        if not User.objects.filter(phone=value).exists():
+            raise serializers.ValidationError(
+                "we cant find user with this phone number"
+            )
+        return value
+
+
+class OtpValidatSerializer(serializers.Serializer):
+    phone = serializers.CharField(
+        max_length=11, min_length=11, required=True, allow_blank=False
+    )
+    code = serializers.CharField(required=True, allow_blank=False)
+
+    def validate_phone(self, value):
+        if not value.startswith("09"):
+            raise serializers.ValidationError("please enter a valid phone number")
+        return value
+
+    def validate_code(self, value):
+        if len(value) != 6:
+            raise serializers.ValidationError(
+                "The code you entered is incorrect or has expired"
+            )
+        return value
+
+    def validate(self, attrs):
+        phone = attrs["phone"]
+        code = attrs["code"]
+
+        try:
+            otp = OtpVerificationCode.objects.get(phone=phone, code=code)
+        except OtpVerificationCode.DoesNotExist:
+            raise serializers.ValidationError(
+                "The code you entered is incorrect or has expired"
+            )
+        if not otp.is_valid():
+            raise serializers.ValidationError(
+                "The code you entered is incorrect or has expired"
+            )
+        return attrs

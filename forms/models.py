@@ -55,25 +55,25 @@ class Field(models.Model):
     type = models.PositiveSmallIntegerField(choices=TYPES)
     answer_required = models.BooleanField()
     error_message = models.CharField(max_length=500)
-    form = models.ForeignKey(
-        to="Form",
+    owner = models.ForeignKey(
+        to=get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
-        related_name="fields",
     )
 
 
 class Form(models.Model):
     metadata = models.JSONField()
     title = models.CharField(max_length=250)
-    pipline = models.ForeignKey(
-        to="Pipline",
+    fields = models.ManyToManyField(Field, related_name="forms")
+    owner = models.ForeignKey(
+        to=get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
     )
 
 
-class Pipline(models.Model):
+class Pipeline(models.Model):
     metadata = models.JSONField()
     questions_responding_duration = models.PositiveBigIntegerField(
         help_text="Response duration time in minutes"
@@ -89,6 +89,7 @@ class Pipline(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
+    forms = models.ManyToManyField(Form, related_name="pipelines")
 
 
 class Response(models.Model):
@@ -97,8 +98,8 @@ class Response(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
-    pipline = models.ForeignKey(
-        to=Pipline,
+    pipeline = models.ForeignKey(
+        to=Pipeline,
         on_delete=models.CASCADE,
     )
     data = models.JSONField()

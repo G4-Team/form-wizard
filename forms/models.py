@@ -89,16 +89,3 @@ class Pipline(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
-
-
-class Response(models.Model):
-    owner = models.ForeignKey(
-        to=get_user_model(),
-        on_delete=models.SET_NULL,
-        null=True,
-    )
-    pipline = models.ForeignKey(
-        to=Pipline,
-        on_delete=models.CASCADE,
-    )
-    data = models.JSONField()

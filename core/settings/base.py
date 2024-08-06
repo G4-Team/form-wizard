@@ -11,6 +11,7 @@ LOCAL_APPS = [
     "api.apps.ApiConfig",
     "accounts.apps.AccountsConfig",
     "forms.apps.FormsConfig",
+    "responses.apps.ResponsesConfig",
 ]
 
 THIRD_PARTY_APPS = [

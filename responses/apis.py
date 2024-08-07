@@ -1,3 +1,17 @@
-from django.shortcuts import render
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-# Create your views here.
+from .serializer import ResponseWriteSerializer
+
+
+class AddResponseView(APIView):
+
+    def post(self, request):
+        serializer = ResponseWriteSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            data={"message": "Your response successfully submitted."},
+        )

@@ -78,28 +78,14 @@ class Pipeline(models.Model):
     questions_responding_duration = models.PositiveBigIntegerField(
         help_text="Response duration time in minutes"
     )
-    start_datetime = models.DateTimeField()
-    stop_datetime = models.DateTimeField()
+    start_datetime = models.DateTimeField(null=True, blank=True)
+    stop_datetime = models.DateTimeField(null=True, blank=True)
     hide_previous_button = models.BooleanField()
     hide_next_button = models.BooleanField()
     is_private = models.BooleanField()
-    password = models.CharField(max_length=50, null=True)
+    password = models.CharField(max_length=50, null=True, blank=True)
     owner = models.ForeignKey(
         to=get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
     )
-    forms = models.ManyToManyField(Form, related_name="pipelines")
-
-
-class Response(models.Model):
-    owner = models.ForeignKey(
-        to=get_user_model(),
-        on_delete=models.SET_NULL,
-        null=True,
-    )
-    pipeline = models.ForeignKey(
-        to=Pipeline,
-        on_delete=models.CASCADE,
-    )
-    data = models.JSONField()

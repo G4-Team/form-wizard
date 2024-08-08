@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import serializers
 
-from forms.models import Field, Form, Pipline
+from forms.models import Field, Form, Pipeline
 
 from .models import Response
 from .utils import get_client_ip
@@ -21,31 +21,33 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def validate_pipline(self, pipline: Pipline):
+    def validate_pipeline(self, pipeline: Pipeline):
         now = timezone.make_aware(
             timezone.datetime.now(), timezone.get_default_timezone()
         )
 
-        if pipline.stop_datetime is not None and now > pipline.stop_datetime:
-            raise serializers.ValidationError("This pipline has expired.")
+        if pipeline.stop_datetime is not None and now > pipeline.stop_datetime:
+            raise serializers.ValidationError("This pipeline has expired.")
 
-        if pipline.start_datetime is not None and now < pipline.start_datetime:
+        if pipeline.start_datetime is not None and now < pipeline.start_datetime:
             raise serializers.ValidationError(
-                f"The pipeline has not started yet. It will start at {pipline.start_datetime}."
+                f"The pipeline has not started yet. It will start at {pipeline.start_datetime}."
             )
-        return pipline
+        return pipeline
 
     def validate(self, attrs):
 
-        pipline: Pipline = attrs["pipline"]
-        if pipline.is_private:
+        pipeline: Pipeline = attrs["pipeline"]
+        if pipeline.is_private:
             if "password" not in attrs:
                 raise serializers.ValidationError(
-                    {"password": "The pipline is protected. so, This field is required"}
+                    {
+                        "password": "The pipeline is protected. so, This field is required"
+                    }
                 )
 
             password = attrs["password"]
-            if password != pipline.password:
+            if password != pipeline.password:
                 raise serializers.ValidationError(
                     {"password": "password is incorrect."}
                 )
@@ -53,15 +55,15 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
             attrs.pop("password")
 
         form: Form = attrs["form"]
-        if pipline.hide_next_button:
-            index_form = pipline.metadata["order"].index(form.id)
+        if pipeline.hide_next_button:
+            index_form = pipeline.metadata["order"].index(form.id)
 
             if self.context["request"].user.is_authenticated:
                 if index_form != 0:
-                    previous_form_id = pipline.metadata["order"][index_form - 1]
+                    previous_form_id = pipeline.metadata["order"][index_form - 1]
                     if not Response.objects.filter(
                         form__id=previous_form_id,
-                        pipline__id=pipline.id,
+                        pipeline__id=pipeline.id,
                         owner__id=self.context["request"].user.id,
                     ).exists():
                         raise serializers.ValidationError(
@@ -69,10 +71,10 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                         )
             else:
                 if index_form != 0:
-                    previous_form_id = pipline.metadata["order"][index_form - 1]
+                    previous_form_id = pipeline.metadata["order"][index_form - 1]
                     if not Response.objects.filter(
                         form__id=previous_form_id,
-                        pipline__id=pipline.id,
+                        pipeline__id=pipeline.id,
                         ip=get_client_ip(self.context["request"]),
                     ).exists():
                         raise serializers.ValidationError(
@@ -121,11 +123,7 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                     if not re.match(field.metadata["regex_value"], str(value)):
                         raise serializers.ValidationError(
                             {
-                                "data": {
-                                    field.slug: field.metadata[
-                                        "regex_validation_message"
-                                    ]
-                                },
+                                "data": {field.slug: field.error_message},
                             }
                         )
 

@@ -1,5 +1,5 @@
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -77,7 +77,7 @@ class FormCreateView(APIView):
     def post(self, request):
         serializer = FormSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.data['fields'] = FieldSerializer(data=request.data['fields'])
+            serializer.data["fields"] = FieldSerializer(data=request.data["fields"])
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -94,7 +94,7 @@ class FormAddField(APIView):
         form_serializer = FormSerializer(instance=form)
         field_serializer = FieldSerializer(instance=field)
         if form_serializer.is_valid() and field_serializer.is_valid():
-            form_serializer.validated_data['fields'].add(field_serializer.instance)
+            form_serializer.validated_data["fields"].add(field_serializer.instance)
             form_serializer.save()
             return Response(form_serializer.data, status=status.HTTP_201_CREATED)
         return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -106,7 +106,9 @@ class FormViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     def list(self, request):
-        serializer = self.serializer_class(self.queryset.filter(owner=request.user), many=True)
+        serializer = self.serializer_class(
+            self.queryset.filter(owner=request.user), many=True
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request):

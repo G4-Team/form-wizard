@@ -1,13 +1,13 @@
 from rest_framework import serializers
 
-from forms.models import Field, Form, Pipeline, Response
+from forms.models import Field, Form, Pipeline
 
 
 class FieldSerializer(serializers.ModelSerializer):
     # owner = serializers.StringRelatedField(read_only=True)
     class Meta:
         model = Field
-        fields = '__all__'
+        fields = "__all__"
 
 
 class FormSerializer(serializers.ModelSerializer):
@@ -16,16 +16,10 @@ class FormSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Form
-        fields = '__all__'
+        fields = "__all__"
 
 
 class PipelineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pipeline
-        fields = '__all__'
-
-
-class ResponseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Response
-        fields = '__all__'
+        fields = "__all__"

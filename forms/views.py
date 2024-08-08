@@ -108,43 +108,20 @@ class FormCreateView(APIView):
 class FormAddField(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
 
-    def put(self, request, form_pk, field_pk):
-        field = Field.objects.get(pk=field_pk)
-        form = Form.objects.get(pk=form_pk)
-        self.check_object_permissions(request, field)
+    def put(self, request, form_id):
+        form = Form.objects.get(pk=form_id)
         self.check_object_permissions(request, form)
-        field_serializer = FieldSerializer(instance=field)
-        if field_serializer.is_valid():
-            form_serializer = FormSerializer(instance=form, data=field_serializer.data, partial=True)
-            if form_serializer.is_valid() and field_serializer.is_valid():
-                form_serializer.save()
-                return Response(form_serializer.data, status=status.HTTP_201_CREATED)
-            return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(field_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = FormSerializer(instance=form, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class FormViewSet(viewsets.ModelViewSet):
-    serializer_class = FormSerializer
-    queryset = Form.objects.all()
-    permission_classes = (IsAuthenticated,)
-
-    def list(self, request):
-        serializer = self.serializer_class(
-            self.queryset.filter(owner=request.user), many=True
-        )
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def create(self, request):
-        pass
-
-    def retrieve(self, request, pk):
-        pass
-
-    def update(self, request, pk):
-        pass
-
-    def partial_update(self, request, pk):
-        pass
-
-    def destroy(self, request, pk):
-        pass
+class FormDeleteView(APIView):
+    permission_classes = (IsOwnerOrReadOnly, )
+    def delete(self, request, pk):
+        form = Form.objects.get(pk=pk)
+        self.check_object_permissions(request, form)
+        form.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

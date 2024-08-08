@@ -61,9 +61,6 @@ class Field(models.Model):
         null=True,
     )
 
-    def __str__(self):
-        return f'{self.id}: {self.title}'
-
 
 class Form(models.Model):
     metadata = models.JSONField()
@@ -74,9 +71,6 @@ class Form(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
-
-    def __str__(self):
-        return f'{self.id}: {self.title}'
 
 
 class Pipeline(models.Model):

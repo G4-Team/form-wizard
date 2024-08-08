@@ -12,7 +12,8 @@ form_urls = [
     path('all/', views.AllFormListView.as_view(), name='all-form-list'),
     path('add/', views.FormCreateView.as_view(),name='form-add'),
     path('<int:pk>/', views.FormDataView.as_view(), name='form-data'),
-    path("<int:form_id>/add/<int:field_id>/", FormAddField.as_view(), name="add-field-to-form"),
+    path("update/<int:form_id>/", FormAddField.as_view(), name="add-field-to-form"),
+    path('delete/<int:pk>/', views.FormDeleteView.as_view(), name='form-delete'),
 ]
 
 field_urls = [
@@ -33,7 +34,3 @@ urlpatterns = [
     path("fields/", include(field_urls)),
     path("piplines/", include(pipline_urls)),
 ]
-
-router = routers.SimpleRouter()
-router.register('forms', views.FormViewSet)
-urlpatterns += router.urls

@@ -10,35 +10,29 @@ class FieldSerializer(serializers.ModelSerializer):
 
 
 class FormSerializer(serializers.ModelSerializer):
-    fields = serializers.StringRelatedField(many=True, read_only=True)
+    fields = FieldSerializer(many=True, read_only=True)
 
     class Meta:
         model = Form
         fields = "__all__"
 
     def create(self, validated_data):
-        fields = self.initial_data['fields'].split(',')
-        field_instances = []
-        for field in fields:
-            field_instances.append(Field.objects.get(pk=int(field)))
+        field_id = self.initial_data['fields']
+        field_instances = [Field.objects.get(pk=int(field_id))]
         form = Form.objects.create(**validated_data)
         form.fields.set(field_instances)
         return form
 
     def update(self, instance, validated_data):
-        fields_data = validated_data.pop('fields')
+        field = self.initial_data.get('fields', None)
         instance = super(FormSerializer, self).update(instance, validated_data)
-
-        for fields_data in fields_data:
-            fields_qs = Field.objects.filter(pk=fields_data['id'])
-
-            if fields_qs.exists():
-                fields = fields_qs.first()
+        if field:
+            field_id = field['id']
+            fields = Field.objects.get(pk=field_id)
+            if self.initial_data['remove']:
+                instance.fields.remove(fields)
             else:
-                fields = Field.objects.create(**fields_data)
-
-            instance.fields.add(fields)
-
+                instance.fields.add(fields)
         return instance
 
 

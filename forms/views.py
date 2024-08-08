@@ -27,6 +27,13 @@ class FieldListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class FieldDataView(APIView):
+    permission_classes = (IsOwnerOrReadOnly,)
+    def get(self, request, pk):
+        field = Field.objects.get(pk=pk)
+        serializer = FieldSerializer(instance=field)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class FieldCreateView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -61,13 +68,29 @@ class FieldDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AllFormListView(APIView):
+    permission_classes = (IsAuthenticated,)
+    def get(self, request):
+        form = Form.objects.all()
+        serializer = FormSerializer(instance=form, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class FormListView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         user = request.user
         forms = Form.objects.filter(owner=user)
-        serializer = FieldSerializer(instance=forms, many=True)
+        serializer = FormSerializer(instance=forms, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FormDataView(APIView):
+    permission_classes = (IsOwnerOrReadOnly,)
+    def get(self, request, pk):
+        form = Form.objects.get(pk=pk)
+        serializer = FormSerializer(instance=form)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -77,7 +100,6 @@ class FormCreateView(APIView):
     def post(self, request):
         serializer = FormSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.data["fields"] = FieldSerializer(data=request.data["fields"])
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -91,13 +113,14 @@ class FormAddField(APIView):
         form = Form.objects.get(pk=form_pk)
         self.check_object_permissions(request, field)
         self.check_object_permissions(request, form)
-        form_serializer = FormSerializer(instance=form)
         field_serializer = FieldSerializer(instance=field)
-        if form_serializer.is_valid() and field_serializer.is_valid():
-            form_serializer.validated_data["fields"].add(field_serializer.instance)
-            form_serializer.save()
-            return Response(form_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if field_serializer.is_valid():
+            form_serializer = FormSerializer(instance=form, data=field_serializer.data, partial=True)
+            if form_serializer.is_valid() and field_serializer.is_valid():
+                form_serializer.save()
+                return Response(form_serializer.data, status=status.HTTP_201_CREATED)
+            return Response(form_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(field_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FormViewSet(viewsets.ModelViewSet):

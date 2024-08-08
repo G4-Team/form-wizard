@@ -65,7 +65,7 @@ class Field(models.Model):
 class Form(models.Model):
     metadata = models.JSONField()
     title = models.CharField(max_length=250)
-    fields = models.ManyToManyField(Field, related_name="forms", null=True, blank=True)
+    fields = models.ManyToManyField(Field, related_name="forms", blank=True)
     owner = models.ForeignKey(
         to=get_user_model(),
         on_delete=models.SET_NULL,

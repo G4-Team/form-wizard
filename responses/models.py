@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from forms.models import Form, Pipline
+from forms.models import Form, Pipeline
 
 
 class Response(models.Model):
@@ -11,8 +11,8 @@ class Response(models.Model):
         null=True,
     )
     ip = models.GenericIPAddressField(null=True, blank=True)
-    pipline = models.ForeignKey(
-        to=Pipline,
+    pipeline = models.ForeignKey(
+        to=Pipeline,
         on_delete=models.CASCADE,
     )
     form = models.ForeignKey(

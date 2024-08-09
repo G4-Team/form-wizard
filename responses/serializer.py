@@ -36,7 +36,6 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
         return pipeline
 
     def validate(self, attrs):
-
         pipeline: Pipeline = attrs["pipeline"]
         if pipeline.is_private:
             if "password" not in attrs:
@@ -83,7 +82,6 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
 
         fields: QuerySet[Field] = form.fields.all()
         data = attrs["data"]
-
         for field in fields:
             if field.answer_required:
                 if str(field.id) not in data.keys():
@@ -92,40 +90,9 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                             "data": {field.slug: "This field is required."},
                         }
                     )
-
-                if field.type == Field.TYPES.CHOISES_INPUT:
-                    minimum = field.metadata["min_selectable_choices"]
-                    maximum = field.metadata["max_selectable_choices"]
-                    values = data[str(field.id)]
-                    if not isinstance(values, list):
-                        raise serializers.ValidationError(
-                            {
-                                "data": {field.slug: "The answer should be a list."},
-                            }
-                        )
-                    if len(values) < minimum or len(values) > maximum:
-                        raise serializers.ValidationError(
-                            {
-                                "data": {
-                                    field.slug: f"The number of answers should be more than {minimum} and less than {maximum}."
-                                },
-                            }
-                        )
-                    for e in values:
-                        if str(e) not in field.metadata["choices"].keys():
-                            raise serializers.ValidationError(
-                                {
-                                    "data": {field.slug: f"{e} is not a valid choice."},
-                                }
-                            )
-                else:
-                    value = data[str(field.id)]
-                    if not re.match(field.metadata["regex_value"], str(value)):
-                        raise serializers.ValidationError(
-                            {
-                                "data": {field.slug: field.error_message},
-                            }
-                        )
+            resp = data.get(str(field.id), None)
+            if resp is not None:
+                self.field_validation(field=field, response=resp)
 
         return attrs
 
@@ -136,3 +103,171 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
             validated_data["ip"] = get_client_ip(request=self.context["request"])
 
         return super().create(validated_data)
+
+    def field_validation(field: Field, response):
+        match field.type:
+            case Field.TYPES.CHOISES_INPUT:
+                minimum = field.metadata["min_selectable_choices"]
+                maximum = field.metadata["max_selectable_choices"]
+                if not isinstance(response, list):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: "The answer should be a list."},
+                        }
+                    )
+                if len(response) < minimum or len(response) > maximum:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The number of answers should be more than {minimum} and less than {maximum}."
+                            },
+                        }
+                    )
+                for e in response:
+                    if str(e) not in field.metadata["choices"].keys():
+                        raise serializers.ValidationError(
+                            {
+                                "data": {field.slug: f"{e} is not a valid choice."},
+                            }
+                        )
+            case Field.TYPES.NUM_INPUT:
+                if not isinstance(response, (int, float)):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: "The answer should be a number(float or int)."
+                            },
+                        }
+                    )
+                number_max_value = field.metadata["number_max_value"]
+                if response > number_max_value:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should less than {number_max_value}."
+                            },
+                        }
+                    )
+                number_min_value = field.metadata["number_min_value"]
+                if response < number_min_value:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should greater than {number_min_value}."
+                            },
+                        }
+                    )
+            case Field.TYPES.LONG_TXT_INPUT:
+                if not isinstance(response, str):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: "The answer should be a string."},
+                        }
+                    )
+                answer_max_length = field.metadata["answer_max_length"]
+                if len(response) > answer_max_length:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should less than {answer_max_length} char."
+                            },
+                        }
+                    )
+                answer_min_length = field.metadata["answer_min_length"]
+                if len(response) < answer_min_length:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should more than {answer_min_length} char."
+                            },
+                        }
+                    )
+            case (
+                Field.TYPES.TXT_INPUT_IP
+                | Field.TYPES.TXT_INPUT_TIME
+                | Field.TYPES.TXT_INPUT_EMAIL
+            ):
+                if not isinstance(response, str):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: "The answer should be a string."},
+                        }
+                    )
+                regex_value = field.metadata["regex_value"]
+                if not re.match(regex_value, response):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: field.error_message},
+                        }
+                    )
+            case Field.TYPES.TXT_INPUT_FR, Field.TYPES.TXT_INPUT_ENG:
+                if not isinstance(response, str):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: "The answer should be a string."},
+                        }
+                    )
+                answer_max_length = field.metadata["answer_max_length"]
+                if len(response) > answer_max_length:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should less than {answer_max_length} char."
+                            },
+                        }
+                    )
+                answer_min_length = field.metadata["answer_min_length"]
+                if len(response) < answer_min_length:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should more than {answer_min_length} char."
+                            },
+                        }
+                    )
+                regex_value = field.metadata["regex_value"]
+                if not re.match(regex_value, response):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: field.error_message},
+                        }
+                    )
+            case Field.TYPES.TXT_INPUT_NUMBERS:
+                if not isinstance(response, str):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: "The answer should be a string."},
+                        }
+                    )
+                regex_value = field.metadata["regex_value"]
+                if not re.match(regex_value, response):
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: field.error_message},
+                        }
+                    )
+                try:
+                    response = int(response)
+                except ValueError:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: "Wrong int number."},
+                        }
+                    )
+                if response > number_max_value:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should less than {number_max_value}."
+                            },
+                        }
+                    )
+                number_min_value = field.metadata["number_min_value"]
+                if response < number_min_value:
+                    raise serializers.ValidationError(
+                        {
+                            "data": {
+                                field.slug: f"The answer should greater than {number_min_value}."
+                            },
+                        }
+                    )

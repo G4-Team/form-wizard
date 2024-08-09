@@ -3,10 +3,12 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from forms.models import Field, Form
-from forms.serializers import FieldSerializer, FormSerializer
+from forms.models import Field, Form, Pipeline
+from forms.serializers import FieldSerializer, FormSerializer, PipelineSerializer
 from permissions import IsOwnerOrReadOnly
 
+
+#Field API Views
 
 class AllFieldListView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -29,10 +31,12 @@ class FieldListView(APIView):
 
 class FieldDataView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
-    def get(self, request, pk):
-        field = Field.objects.get(pk=pk)
+
+    def get(self, request, field_id):
+        field = Field.objects.get(pk=field_id)
         serializer = FieldSerializer(instance=field)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class FieldCreateView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -48,8 +52,8 @@ class FieldCreateView(APIView):
 class FieldUpdateView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
 
-    def put(self, request, pk):
-        field = Field.objects.get(pk=pk)
+    def put(self, request, field_id):
+        field = Field.objects.get(pk=field_id)
         self.check_object_permissions(request, field)
         serializer = FieldSerializer(instance=field, data=request.data, partial=True)
         if serializer.is_valid():
@@ -61,15 +65,18 @@ class FieldUpdateView(APIView):
 class FieldDeleteView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
 
-    def delete(self, request, pk):
-        field = Field.objects.get(pk=pk)
+    def delete(self, request, field_id):
+        field = Field.objects.get(pk=field_id)
         self.check_object_permissions(request, field)
         field.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+#Form API Views
+
 class AllFormListView(APIView):
     permission_classes = (IsAuthenticated,)
+
     def get(self, request):
         form = Form.objects.all()
         serializer = FormSerializer(instance=form, many=True)
@@ -88,8 +95,9 @@ class FormListView(APIView):
 
 class FormDataView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
-    def get(self, request, pk):
-        form = Form.objects.get(pk=pk)
+
+    def get(self, request, form_id):
+        form = Form.objects.get(pk=form_id)
         serializer = FormSerializer(instance=form)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -105,7 +113,7 @@ class FormCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class FormAddField(APIView):
+class FormUpdateView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
 
     def put(self, request, form_id):
@@ -119,9 +127,71 @@ class FormAddField(APIView):
 
 
 class FormDeleteView(APIView):
-    permission_classes = (IsOwnerOrReadOnly, )
-    def delete(self, request, pk):
-        form = Form.objects.get(pk=pk)
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def delete(self, request, form_id):
+        form = Form.objects.get(pk=form_id)
         self.check_object_permissions(request, form)
         form.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+#Pipeline API Views
+
+class AllPipelineListView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        pipeline = Pipeline.objects.all()
+        serializer = PipelineSerializer(instance=pipeline, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PipelineListView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        user = request.user
+        pipelines = Pipeline.objects.filter(owner=user)
+        serializer = PipelineSerializer(instance=pipelines, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PipelineDataView(APIView):
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def get(self, request, pipeline_id):
+        pipeline = Pipeline.objects.get(pk=pipeline_id)
+        serializer = PipelineSerializer(instance=pipeline)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PipelineCreateView(APIView):
+    permission_classes = (IsAuthenticated,)
+    def post(self, request):
+        serializer = PipelineSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PipelineUpdateView(APIView):
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def put(self, request, pipeline_id):
+        pipeline = Pipeline.objects.get(pk=pipeline_id)
+        self.check_object_permissions(request, pipeline)
+        serializer = PipelineSerializer(instance=pipeline, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PipelineDeleteView(APIView):
+    permission_classes = (IsOwnerOrReadOnly,)
+    def delete(self, request, pipeline_id):
+        pipeline = Pipeline.objects.get(pk=pipeline_id)
+        pipeline.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -92,18 +92,58 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                     )
             resp = data.get(str(field.id), None)
             if resp is not None:
-                self.field_validation(field=field, response=resp)
+                ResponseWriteSerializer.field_validation(
+                    field=field,
+                    response=resp,
+                )
 
         return attrs
 
     def create(self, validated_data):
         if self.context["request"].user.is_authenticated:
+            pipeline: Pipeline = validated_data["pipeline"]
+            form: Form = validated_data["form"]
+            if Response.objects.filter(
+                form__id=form.id,
+                pipeline__id=pipeline.id,
+                owner__id=self.context["request"].user.id,
+            ).exists():
+                response = Response.objects.only("id").get(
+                    form__id=form.id,
+                    pipeline__id=pipeline.id,
+                    owner__id=self.context["request"].user.id,
+                )
+                raise serializers.ValidationError(
+                    {
+                        "message": f"You responsed to this form befor, if you want to change your response, use url below",
+                        "url": f'{reverse("api:responses:update-response", kwargs={"response_id":response.id})}',
+                    }
+                )
             validated_data["owner"] = self.context["request"].user
         else:
+            pipeline: Pipeline = validated_data["pipeline"]
+            form: Form = validated_data["form"]
+            if Response.objects.filter(
+                form__id=form.id,
+                pipeline__id=pipeline.id,
+                ip=get_client_ip(self.context["request"]),
+            ).exists():
+                response = Response.objects.only("id").get(
+                    form__id=form.id,
+                    pipeline__id=pipeline.id,
+                    ip=get_client_ip(self.context["request"]),
+                )
+                raise serializers.ValidationError(
+                    {
+                        "message": f"You responsed to this form befor, if you want to change your response, use url below",
+                        "url": f'{reverse("api:responses:update-response", kwargs={"response_id":response.id})}',
+                    }
+                )
             validated_data["ip"] = get_client_ip(request=self.context["request"])
 
         return super().create(validated_data)
 
+    @staticmethod
     def field_validation(field: Field, response):
         match field.type:
             case Field.TYPES.CHOISES_INPUT:
@@ -271,3 +311,64 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                             },
                         }
                     )
+
+
+class ResponseUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Response
+        fields = [
+            "data",
+        ]
+
+    def validate(self, attrs):
+        if "data" not in attrs:
+            raise serializers.ValidationError({"data": "This field is required."})
+        return super().validate(attrs)
+
+    def update(self, instance, validated_data):
+        pipeline: Pipeline = instance.pipeline
+        if self.context["request"].user.is_authenticated:
+            if instance.owner != self.context[
+                "request"
+            ].user and instance.ip != get_client_ip(request=self.context["request"]):
+                error = serializers.ValidationError(
+                    {
+                        "permission-denied": "You can't change this response! because you are not owner."
+                    }
+                )
+                error.status_code = 403
+                raise error
+        else:
+            if instance.ip != get_client_ip(request=self.context["request"]):
+                error = serializers.ValidationError(
+                    {
+                        "permission-denied": "You can't change this response! because you are not owner."
+                    }
+                )
+                error.status_code = 403
+                raise error
+
+        if pipeline.hide_previous_button:
+            raise serializers.ValidationError(
+                {
+                    "update-error": "This pipeline set as an unchangeble pipeline and you can't change your response!"
+                }
+            )
+        fields: QuerySet[Field] = instance.form.fields.all()
+        update_validated_data = validated_data["data"]
+        for field in fields:
+            if field.answer_required:
+                if str(field.id) not in update_validated_data.keys():
+                    raise serializers.ValidationError(
+                        {
+                            "data": {field.slug: "This field is required."},
+                        }
+                    )
+            resp = update_validated_data.get(str(field.id), None)
+            if resp is not None:
+                ResponseWriteSerializer.field_validation(
+                    field=field,
+                    response=resp,
+                )
+
+        return super().update(instance, validated_data)

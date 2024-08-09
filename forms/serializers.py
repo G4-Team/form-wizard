@@ -102,13 +102,6 @@ class FormSerializer(serializers.ModelSerializer):
         model = Form
         fields = "__all__"
 
-    def validate_fields(self, value):
-        if self.instance:
-            for field in self.instance.fields:
-                if value == field['id']:
-                    raise serializers.ValidationError('This field is already in use')
-        return value
-
     def validate(self, data):
         metadata = data['metadata']
         if not self.instance: #creation mode
@@ -132,12 +125,16 @@ class FormSerializer(serializers.ModelSerializer):
                         'number of adding fields does not match with the number of fields given in order'
                     )
                 else:
-                    fields = self.initial_data['fields']
-                    for field in fields:
-                        if field not in metadata['order']:
+                    fields_id = self.initial_data['fields']
+                    for field_id in fields_id:
+                        if field_id not in metadata['order']:
                             raise serializers.ValidationError(
-                                f'The {field["id"]} field is not defined in metadata order'
+                                f'The {field_id} field is not defined in metadata order'
                             )
+                        else:
+                            field = Field.objects.get(id=field_id)
+                            if field in self.instance.fields:
+                                raise serializers.ValidationError('This field is already in use')
             else: #metadata['fields_update_mode'] == 'remove'
                 if 'order' in metadata:
                     if len(metadata['order']) != len(self.instance.metadata['order'])-len(self.initial_data['fields']):

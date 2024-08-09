@@ -13,6 +13,10 @@ class FieldSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Type must be an integer from 1 to 9')
         return value
 
+    def validate_owner(self, value):
+        if value != self.context['request'].user:
+            raise serializers.ValidationError('you are not the owner')
+
     def validate(self, data):
         field_type = data.get('type')
         metadata = data.get('metadata')
@@ -102,6 +106,10 @@ class FormSerializer(serializers.ModelSerializer):
         model = Form
         fields = "__all__"
 
+    def validate_owner(self, value):
+        if value != self.context['request'].user:
+            raise serializers.ValidationError('you are not the owner')
+
     def validate(self, data):
         metadata = data['metadata']
         if not self.instance: #creation mode
@@ -110,10 +118,10 @@ class FormSerializer(serializers.ModelSerializer):
             elif len(metadata['order']) != len(self.initial_data['fields']):
                 raise serializers.ValidationError('Order must have the same number of fields')
             else:
-                fields = self.initial_data['fields']
-                for field in fields:
-                    if field not in metadata['order']:
-                        raise serializers.ValidationError(f'The {field["id"]} field is not defined in metadata order')
+                fields_id = self.initial_data['fields']
+                for field_id in fields_id:
+                    if field_id not in metadata['order']:
+                        raise serializers.ValidationError(f'The {field_id} field is not defined in metadata order')
         elif 'fields' in self.initial_data: #updating fields
             if 'fields_update_mode' not in metadata or metadata['fields_update_mode'] not in ['add', 'remove']:
                 raise serializers.ValidationError('Metadata must contain field_update_mode as "add"/"remove"')
@@ -188,6 +196,14 @@ class PipelineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pipeline
         fields = "__all__"
+
+    def validate_metadata(self, value):
+        if 'order' not in value:
+            raise serializers.ValidationError('Order must be defined in metadata')
+
+    def validate_owner(self, value):
+        if value != self.context['request'].user:
+            raise serializers.ValidationError('you are not the owner')
 
     def create(self, validated_data):
         pipeline = Pipeline.objects.create(**validated_data)

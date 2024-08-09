@@ -42,7 +42,7 @@ class FieldCreateView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        serializer = FieldSerializer(data=request.data)
+        serializer = FieldSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -106,7 +106,7 @@ class FormCreateView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        serializer = FormSerializer(data=request.data)
+        serializer = FormSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -168,8 +168,9 @@ class PipelineDataView(APIView):
 
 class PipelineCreateView(APIView):
     permission_classes = (IsAuthenticated,)
+
     def post(self, request):
-        serializer = PipelineSerializer(data=request.data)
+        serializer = PipelineSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

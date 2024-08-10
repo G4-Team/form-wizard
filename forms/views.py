@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,23 +22,14 @@ class CommonRegexApi(APIView):
         return Response(data=COMMON_REGEX_TYPES)
 
 
-class AllFieldListView(APIView):
+class FieldListView(ListAPIView):
     permission_classes = (IsAuthenticated,)
+    serializer_class = FieldSerializer
 
-    def get(self, request):
-        fields = Field.objects.all()
-        serializer = FieldSerializer(instance=fields, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class FieldListView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request):
-        user = request.user
-        fields = Field.objects.filter(owner=user)
-        serializer = FieldSerializer(instance=fields, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        if self.request.user.is_admin:
+            return Field.objects.all()
+        return Field.objects.filter(owner__id=self.request.user.id)
 
 
 class FieldDataView(APIView):

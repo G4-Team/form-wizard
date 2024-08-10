@@ -15,7 +15,6 @@ form_urls = [
 
 field_urls = [
     path("", views.FieldListView.as_view(), name="field-list"),
-    path("all/", views.AllFieldListView.as_view(), name="all-field-list"),
     path("<int:field_id>/", views.FieldDataView.as_view(), name="field-data"),
     path("add/", views.FieldCreateView.as_view(), name="field-add"),
     path(

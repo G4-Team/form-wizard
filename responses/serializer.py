@@ -452,3 +452,32 @@ class ResponseUpdateSerializer(serializers.ModelSerializer):
                 )
 
         return super().update(instance, validated_data)
+
+
+class ReadResponseSerializer(serializers.BaseSerializer):
+    def to_representation(self, instance: Response):
+        rep = {
+            "data": instance.data,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at,
+        }
+        if instance.owner is not None:
+            rep["owner"] = instance.owner.email
+        return rep
+
+
+class PipelineSubmissionSerializer(serializers.ModelSerializer):
+    responses = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PipelineSubmission
+        fields = "__all__"
+
+    def get_responses(self, obj: PipelineSubmission):
+        resp = {}
+
+        for id in obj.responses["responsed_forms"]:
+            response = Response.objects.get(pipeline__id=obj.pipeline.id, form__id=id)
+            resp[f"form-{id}"] = ReadResponseSerializer(instance=response).data
+
+        return resp

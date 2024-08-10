@@ -1,10 +1,15 @@
-from django.contrib.sessions.backends.db import SessionStore
 from django.shortcuts import get_object_or_404
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .models import PipelineSubmission
 from .models import Response as ResponseModel
-from .serializer import ResponseUpdateSerializer, ResponseWriteSerializer
+from .serializer import (
+    PipelineSubmissionSerializer,
+    ResponseUpdateSerializer,
+    ResponseWriteSerializer,
+)
 
 
 class AddResponseView(APIView):
@@ -29,4 +34,22 @@ class UpdateResponseView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(data={"hi": "hi"})
+        return Response(data=serializer.data)
+
+
+class ResponseRetriveApi(RetrieveAPIView):
+    lookup_field = "pk"
+    lookup_url_kwarg = "pipeline_sunbmission_id"
+    serializer_class = PipelineSubmissionSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            if self.request.user.is_admin:
+                return PipelineSubmission.objects.all()
+            return PipelineSubmission.objects.filter(owner__id=self.request.user.id)
+
+        if self.request.session.session_key is None:
+            self.request.session.creat()
+        return PipelineSubmission.objects.filter(
+            session_key=self.request.session.session_key
+        )

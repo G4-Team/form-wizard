@@ -10,6 +10,7 @@ from forms.serializers import (
     FormSerializer,
     PipelineSerializer,
     UpdateFieldSerializer,
+    UpdateFormSerializer,
 )
 from permissions import IsOwnerOrReadOnly
 
@@ -81,7 +82,7 @@ class FieldDeleteView(APIView):
 # Form API Views
 class FormListView(ListAPIView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = FieldSerializer
+    serializer_class = FormSerializer
 
     def get_queryset(self):
         if self.request.user.is_admin:
@@ -103,10 +104,9 @@ class FormCreateView(APIView):
 
     def post(self, request):
         serializer = FormSerializer(data=request.data, context={"request": request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class FormUpdateView(APIView):
@@ -115,11 +115,12 @@ class FormUpdateView(APIView):
     def put(self, request, form_id):
         form = Form.objects.get(pk=form_id)
         self.check_object_permissions(request, form)
-        serializer = FormSerializer(instance=form, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = UpdateFormSerializer(
+            instance=form, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class FormDeleteView(APIView):

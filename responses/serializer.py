@@ -19,6 +19,8 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
         exclude = [
             "created_at",
             "updated_at",
+            "session_key",
+            "owner",
         ]
 
     def validate_pipeline(self, pipeline: Pipeline):
@@ -36,6 +38,10 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
         return pipeline
 
     def validate(self, attrs):
+        if self.context["request"].session.session_key is None:
+            self.context["request"].session.create()
+        session_key = self.context["request"].session.session_key
+
         pipeline: Pipeline = attrs["pipeline"]
         if pipeline.is_private:
             if "password" not in attrs:
@@ -78,7 +84,7 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                     if not Response.objects.filter(
                         form__id=previous_form_id,
                         pipeline__id=pipeline.id,
-                        ip=get_client_ip(self.context["request"]),
+                        session_key=session_key,
                     ).exists():
                         raise serializers.ValidationError(
                             f"You should first answer to previous form with id: {previous_form_id}"
@@ -165,12 +171,12 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
             if Response.objects.filter(
                 form__id=form.id,
                 pipeline__id=pipeline.id,
-                ip=get_client_ip(self.context["request"]),
+                session_key=self.context["request"].session.session_key,
             ).exists():
                 response = Response.objects.only("id").get(
                     form__id=form.id,
                     pipeline__id=pipeline.id,
-                    ip=get_client_ip(self.context["request"]),
+                    session_key=self.context["request"].session.session_key,
                 )
                 raise serializers.ValidationError(
                     {
@@ -180,7 +186,8 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                 )
 
             pipeline_submission, created = PipelineSubmission.objects.get_or_create(
-                pipeline=pipeline, ip=get_client_ip(self.context["request"])
+                pipeline=pipeline,
+                session_key=self.context["request"].session.session_key,
             )
             if created:
                 responsed_forms_list: list = pipeline_submission.responses[
@@ -209,7 +216,7 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
             ):
                 pipeline_submission.is_completed = True
                 pipeline_submission.save()
-            validated_data["ip"] = get_client_ip(request=self.context["request"])
+            validated_data["session_key"] = self.context["request"].session.session_key
 
         return super().create(validated_data)
 
@@ -391,6 +398,8 @@ class ResponseUpdateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
+        if self.context["request"].session.session_key is None:
+            self.context["request"].session.create()
         if "data" not in attrs:
             raise serializers.ValidationError({"data": "This field is required."})
         return super().validate(attrs)
@@ -398,9 +407,10 @@ class ResponseUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         pipeline: Pipeline = instance.pipeline
         if self.context["request"].user.is_authenticated:
-            if instance.owner != self.context[
-                "request"
-            ].user and instance.ip != get_client_ip(request=self.context["request"]):
+            if (
+                instance.owner != self.context["request"].user
+                and instance.session_key != self.context["request"].session.session_key
+            ):
                 error = serializers.ValidationError(
                     {
                         "permission-denied": "You can't change this response! because you are not owner."
@@ -409,7 +419,7 @@ class ResponseUpdateSerializer(serializers.ModelSerializer):
                 error.status_code = 403
                 raise error
         else:
-            if instance.ip != get_client_ip(request=self.context["request"]):
+            if instance.session_key != self.context["request"].session.session_key:
                 error = serializers.ValidationError(
                     {
                         "permission-denied": "You can't change this response! because you are not owner."

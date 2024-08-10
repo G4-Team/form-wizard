@@ -130,12 +130,13 @@ class FormDeleteView(APIView):
         form = Form.objects.get(pk=form_id)
         self.check_object_permissions(request, form)
         form.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            data={"message": "form successfully deleted."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
 
 # Pipeline API Views
-
-
 class AllPipelineListView(APIView):
     permission_classes = (IsAuthenticated,)
 

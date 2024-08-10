@@ -1,50 +1,32 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-TYPES = {
-    "EN_CHAR": {
-        "regex_value": "^[a-zA-Z ]*$",
-    },
-    "FR_CHAR": {},
+COMMON_REGEX_TYPES = {
+    "english characters": "^[a-zA-Z ]*$",
+    "persian characters": "^[‌ ء-ی]*$",
+    "numbers": "^[0-9۰-۹٠-٩]*$",
+    "email": "^[a-zA-Z0-9_.±]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$",
+    "time": "^([۰-۱0-1٠-١]?[۰-۹0-9٠-٩]|20|21|22|23|۲۰|۲۱|۲۲|۲۳|٢٠|٢١|٢٢|٢٣):([۰-۵0-5٠-٥]?[۰-۹0-9٠-٩])(:([۰-۵0-5٠-٥]?[۰-۹0-9٠-٩]))?$",
+    "ip": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
 }
 
 
 class Field(models.Model):
     class TYPES(models.IntegerChoices):
-        TXT_INPUT_FR = (
+        SHORT_TXT_INPUT = (
             1,
-            "short input include just persian chars",
-        )
-        TXT_INPUT_ENG = (
-            2,
-            "short input include just english chars",
-        )
-        TXT_INPUT_NUMBERS = (
-            3,
-            "short input include just numbers",
-        )
-        TXT_INPUT_EMAIL = (
-            4,
-            "short input include just a valid email",
-        )
-        TXT_INPUT_TIME = (
-            5,
-            "short input include just a valid time like 11:11:11",
-        )
-        TXT_INPUT_IP = (
-            6,
-            "short input include just a valid ip like 192.168.1.1",
+            "short input include a text",
         )
         LONG_TXT_INPUT = (
-            7,
+            2,
             "long input include a text",
         )
         CHOISES_INPUT = (
-            8,
+            3,
             "choose one or multiple choises",
         )
         NUM_INPUT = (
-            9,
+            4,
             "numeric input",
         )
 

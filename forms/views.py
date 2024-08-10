@@ -7,8 +7,14 @@ from forms.models import Field, Form, Pipeline
 from forms.serializers import FieldSerializer, FormSerializer, PipelineSerializer
 from permissions import IsOwnerOrReadOnly
 
+from .models import COMMON_REGEX_TYPES
 
-#Field API Views
+
+# Field API Views
+class CommonRegexApi(APIView):
+    def get(self, request):
+        return Response(data=COMMON_REGEX_TYPES)
+
 
 class AllFieldListView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -42,7 +48,7 @@ class FieldCreateView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        serializer = FieldSerializer(data=request.data, context={'request': request})
+        serializer = FieldSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -72,7 +78,8 @@ class FieldDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-#Form API Views
+# Form API Views
+
 
 class AllFormListView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -106,7 +113,7 @@ class FormCreateView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        serializer = FormSerializer(data=request.data, context={'request': request})
+        serializer = FormSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -136,7 +143,8 @@ class FormDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-#Pipeline API Views
+# Pipeline API Views
+
 
 class AllPipelineListView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -170,7 +178,7 @@ class PipelineCreateView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        serializer = PipelineSerializer(data=request.data, context={'request': request})
+        serializer = PipelineSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -183,7 +191,9 @@ class PipelineUpdateView(APIView):
     def put(self, request, pipeline_id):
         pipeline = Pipeline.objects.get(pk=pipeline_id)
         self.check_object_permissions(request, pipeline)
-        serializer = PipelineSerializer(instance=pipeline, data=request.data, partial=True)
+        serializer = PipelineSerializer(
+            instance=pipeline, data=request.data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -192,6 +202,7 @@ class PipelineUpdateView(APIView):
 
 class PipelineDeleteView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
+
     def delete(self, request, pipeline_id):
         pipeline = Pipeline.objects.get(pk=pipeline_id)
         pipeline.delete()

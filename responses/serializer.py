@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from forms.models import Field, Form, Pipeline
 
-from .models import Response
+from .models import PipelineSubmission, Response
 from .utils import get_client_ip
 
 
@@ -54,6 +54,10 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
             attrs.pop("password")
 
         form: Form = attrs["form"]
+        if form.id not in pipeline.metadata["order"]:
+            raise serializers.ValidationError(
+                {"error": "This form not belong to this pipeline"}
+            )
         if pipeline.hide_next_button:
             index_form = pipeline.metadata["order"].index(form.id)
 
@@ -96,6 +100,10 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                     field=field,
                     response=resp,
                 )
+        ids = [id[0] for id in fields.values_list("id")]
+        for id in list(data):
+            if int(id) not in ids:
+                data.pop(id)
 
         return attrs
 
@@ -119,6 +127,37 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                         "url": f'{reverse("api:responses:update-response", kwargs={"response_id":response.id})}',
                     }
                 )
+
+            pipeline_submission, created = PipelineSubmission.objects.get_or_create(
+                pipeline=pipeline, owner=self.context["request"].user
+            )
+            if created:
+                responsed_forms_list: list = pipeline_submission.responses[
+                    "responsed_forms"
+                ]
+                responsed_forms_list.append(form.id)
+                pipeline_submission.responses["responsed_forms"] = responsed_forms_list
+                pipeline_submission.save()
+            else:
+                now = timezone.make_aware(
+                    timezone.datetime.now(), timezone.get_default_timezone()
+                )
+                duration = (now - pipeline_submission.created_at).total_seconds() / 60
+                if pipeline.questions_responding_duration < duration:
+                    raise serializers.ValidationError(
+                        {"message": "Response time has expired."}
+                    )
+                responsed_forms_list: list = pipeline_submission.responses[
+                    "responsed_forms"
+                ]
+                responsed_forms_list.append(form.id)
+                pipeline_submission.responses["responsed_forms"] = responsed_forms_list
+                pipeline_submission.save()
+            if len(pipeline.metadata["order"]) == len(
+                pipeline_submission.responses["responsed_forms"]
+            ):
+                pipeline_submission.is_completed = True
+                pipeline_submission.save()
             validated_data["owner"] = self.context["request"].user
         else:
             pipeline: Pipeline = validated_data["pipeline"]
@@ -139,6 +178,37 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                         "url": f'{reverse("api:responses:update-response", kwargs={"response_id":response.id})}',
                     }
                 )
+
+            pipeline_submission, created = PipelineSubmission.objects.get_or_create(
+                pipeline=pipeline, ip=get_client_ip(self.context["request"])
+            )
+            if created:
+                responsed_forms_list: list = pipeline_submission.responses[
+                    "responsed_forms"
+                ]
+                responsed_forms_list.append(form.id)
+                pipeline_submission.responses["responsed_forms"] = responsed_forms_list
+                pipeline_submission.save()
+            else:
+                now = timezone.make_aware(
+                    timezone.datetime.now(), timezone.get_default_timezone()
+                )
+                duration = (now - pipeline_submission.created_at).total_seconds() / 60
+                if pipeline.questions_responding_duration < duration:
+                    raise serializers.ValidationError(
+                        {"message": "Response time has expired."}
+                    )
+                responsed_forms_list: list = pipeline_submission.responses[
+                    "responsed_forms"
+                ]
+                responsed_forms_list.append(form.id)
+                pipeline_submission.responses["responsed_forms"] = responsed_forms_list
+                pipeline_submission.save()
+            if len(pipeline.metadata["order"]) == len(
+                pipeline_submission.responses["responsed_forms"]
+            ):
+                pipeline_submission.is_completed = True
+                pipeline_submission.save()
             validated_data["ip"] = get_client_ip(request=self.context["request"])
 
         return super().create(validated_data)

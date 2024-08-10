@@ -6,7 +6,6 @@ app_name = "forms"
 
 form_urls = [
     path("", views.FormListView.as_view(), name="form-list"),
-    path("all/", views.AllFormListView.as_view(), name="all-form-list"),
     path("<int:form_id>/", views.FormDataView.as_view(), name="form-data"),
     path("add/", views.FormCreateView.as_view(), name="form-add"),
     path("update/<int:form_id>/", views.FormUpdateView.as_view(), name="form-update"),

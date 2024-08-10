@@ -79,25 +79,14 @@ class FieldDeleteView(APIView):
 
 
 # Form API Views
-
-
-class AllFormListView(APIView):
+class FormListView(ListAPIView):
     permission_classes = (IsAuthenticated,)
+    serializer_class = FieldSerializer
 
-    def get(self, request):
-        form = Form.objects.all()
-        serializer = FormSerializer(instance=form, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class FormListView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request):
-        user = request.user
-        forms = Form.objects.filter(owner=user)
-        serializer = FormSerializer(instance=forms, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        if self.request.user.is_admin:
+            return Form.objects.all()
+        return Form.objects.filter(owner__id=self.request.user.id)
 
 
 class FormDataView(APIView):

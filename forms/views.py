@@ -72,7 +72,10 @@ class FieldDeleteView(APIView):
         field = Field.objects.get(pk=field_id)
         self.check_object_permissions(request, field)
         field.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            data={"message": "field successfully deleted."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
 
 # Form API Views

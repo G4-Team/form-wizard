@@ -4,7 +4,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from forms.models import Field, Form, Pipeline
-from forms.serializers import FieldSerializer, FormSerializer, PipelineSerializer
+from forms.serializers import (
+    FieldSerializer,
+    FormSerializer,
+    PipelineSerializer,
+    UpdateFieldSerializer,
+)
 from permissions import IsOwnerOrReadOnly
 
 from .models import COMMON_REGEX_TYPES
@@ -60,11 +65,12 @@ class FieldUpdateView(APIView):
     def put(self, request, field_id):
         field = Field.objects.get(pk=field_id)
         self.check_object_permissions(request, field)
-        serializer = FieldSerializer(instance=field, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = UpdateFieldSerializer(
+            instance=field, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class FieldDeleteView(APIView):

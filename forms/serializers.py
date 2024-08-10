@@ -210,6 +210,204 @@ class FieldSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class UpdateFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Field
+        fields = "__all__"
+        read_only_fields = [
+            "owner",
+        ]
+
+    def update(self, instance: Field, validated_data):
+        field_type = validated_data.get("type", instance.type)
+        metadata = validated_data.get("metadata", instance.metadata)
+        match field_type:
+            case Field.TYPES.SHORT_TXT_INPUT:
+                if (
+                    "placeholder" not in metadata
+                    or not isinstance(metadata["placeholder"], str)
+                    or not metadata["placeholder"]
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "placeholder": 'Metadata must contain a [str] placeholder like "only persian"'
+                            }
+                        }
+                    )
+                if (
+                    "answer_max_length" not in metadata
+                    or not isinstance(metadata["answer_max_length"], int)
+                    or metadata["answer_max_length"] < 1
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "answer_min_length": "Metadata must contain a [int] answer_max_length more than 0"
+                            }
+                        }
+                    )
+                if (
+                    "answer_min_length" not in metadata
+                    or not isinstance(metadata["answer_min_length"], int)
+                    or metadata["answer_min_length"] < 0
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "answer_min_length": "Metadata must contain a non negative [int] answer_min_length"
+                            }
+                        }
+                    )
+                if metadata["answer_max_length"] < metadata["answer_min_length"]:
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": "value of answer_max_length can not be less than answer_min_length"
+                        }
+                    )
+                if (
+                    "regex_value" not in metadata
+                    or not isinstance(metadata["regex_value"], str)
+                    or not metadata["regex_value"]
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "regex_value": "Metadata must contain a [str] regex validation"
+                            }
+                        }
+                    )
+                keys_to_keep = {
+                    "placeholder",
+                    "answer_max_length",
+                    "answer_min_length",
+                    "regex_value",
+                }
+                filtered_dict = {k: metadata[k] for k in keys_to_keep if k in metadata}
+                validated_data["metadata"] = filtered_dict
+            case Field.TYPES.LONG_TXT_INPUT:
+                if (
+                    "answer_max_length" not in metadata
+                    or not isinstance(metadata["answer_max_length"], int)
+                    or metadata["answer_max_length"] < 1
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "answer_min_length": "Metadata must contain a [int] answer_max_length more than 0"
+                            }
+                        }
+                    )
+                if (
+                    "answer_min_length" not in metadata
+                    or not isinstance(metadata["answer_min_length"], int)
+                    or metadata["answer_min_length"] < 0
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "answer_min_length": "Metadata must contain a non negative [int] answer_min_length"
+                            }
+                        }
+                    )
+                if metadata["answer_max_length"] < metadata["answer_min_length"]:
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": "value of answer_max_length can not be less than answer_min_length"
+                        }
+                    )
+                keys_to_keep = {
+                    "answer_max_length",
+                    "answer_min_length",
+                }
+                filtered_dict = {k: metadata[k] for k in keys_to_keep if k in metadata}
+                validated_data["metadata"] = filtered_dict
+            case Field.TYPES.NUM_INPUT:
+                if "number_max_value" not in metadata or not isinstance(
+                    metadata["number_max_value"], (int, float)
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "number_max_value": "Metadata must contain a valid [int, float] number_max_value"
+                            }
+                        }
+                    )
+                if "number_min_value" not in metadata or not isinstance(
+                    metadata["number_min_value"], (int, float)
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "number_min_value": "Metadata must contain a valid [int, float] number_min_value"
+                            }
+                        }
+                    )
+                if metadata["number_max_value"] < metadata["number_min_value"]:
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": "value of number_max_value can not be less than number_min_value"
+                        }
+                    )
+                keys_to_keep = {
+                    "number_max_value",
+                    "number_min_value",
+                }
+                filtered_dict = {k: metadata[k] for k in keys_to_keep if k in metadata}
+                validated_data["metadata"] = filtered_dict
+            case Field.TYPES.CHOISES_INPUT:
+                if "min_selectable_choices" not in metadata or not isinstance(
+                    metadata["min_selectable_choices"], int
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "min_selectable_choices": "Metadata must contain a [int] value as min_selectable_choices"
+                            }
+                        }
+                    )
+                if "max_selectable_choices" not in metadata or not isinstance(
+                    metadata["max_selectable_choices"], int
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "max_selectable_choices": "Metadata must contain a [int] value as max_selectable_choices"
+                            }
+                        }
+                    )
+                if (
+                    metadata["max_selectable_choices"]
+                    < metadata["min_selectable_choices"]
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": "value of max_selectable_choices can not be less than min_selectable_choices"
+                        }
+                    )
+                if (
+                    "choices" not in metadata
+                    or not isinstance(metadata["choices"], dict)
+                    or len(metadata["choices"]) == 0
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "choices": 'Choices must be defined in metadata as "choices":{"1": "f1"}'
+                            }
+                        }
+                    )
+                keys_to_keep = {
+                    "min_selectable_choices",
+                    "max_selectable_choices",
+                    "choices",
+                }
+                filtered_dict = {k: metadata[k] for k in keys_to_keep if k in metadata}
+                validated_data["metadata"] = filtered_dict
+
+        return super().update(instance, validated_data)
+
+
 class FormSerializer(serializers.ModelSerializer):
     fields = FieldSerializer(many=True, read_only=True)
 

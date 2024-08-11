@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
-from forms.models import Field, Form, Pipeline, Category
+from forms.models import Category, Field, Form, Pipeline
+
+from .utils import get_random_string
 
 
 class FieldSerializer(serializers.ModelSerializer):
@@ -511,126 +513,13 @@ class UpdateFormSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-# class FormSerializer(serializers.ModelSerializer):
-#     fields = FieldSerializer(many=True, read_only=True)
-
-#     class Meta:
-#         model = Form
-#         fields = "__all__"
-#         read_only_fields = [
-#             "owner",
-#         ]
-
-#     def validate(self, data):
-#         metadata = data["metadata"]
-#         if not self.instance:  # creation mode
-#             if "order" not in metadata or not isinstance(metadata["order"], list):
-#                 raise serializers.ValidationError(
-#                     {
-#                         "metadata": {
-#                             "order": "Order must be defined in metadata [as a list]."
-#                         }
-#                     }
-#                 )
-#             elif len(metadata["order"]) != len(self.initial_data["fields"]):
-#                 raise serializers.ValidationError(
-#                     "Order must have the same number of fields"
-#                 )
-#             else:
-#                 fields_id = self.initial_data["fields"]
-#                 for field_id in fields_id:
-#                     if field_id not in metadata["order"]:
-#                         raise serializers.ValidationError(
-#                             f"The {field_id} field is not defined in metadata order"
-#                         )
-#         elif "fields" in self.initial_data:  # updating fields
-#             if "fields_update_mode" not in metadata or metadata[
-#                 "fields_update_mode"
-#             ] not in ["add", "remove"]:
-#                 raise serializers.ValidationError(
-#                     'Metadata must contain field_update_mode as "add"/"remove"'
-#                 )
-#             elif metadata["fields_update_mode"] == "add":
-#                 if "order" not in metadata:
-#                     raise serializers.ValidationError(
-#                         "Order must be defined in metadata"
-#                     )
-#                 elif len(metadata["order"]) != len(self.initial_data["fields"]) + len(
-#                     self.instance.metadata["order"]
-#                 ):
-#                     raise serializers.ValidationError(
-#                         "number of adding fields does not match with the number of fields given in order"
-#                     )
-#                 else:
-#                     fields_id = self.initial_data["fields"]
-#                     for field_id in fields_id:
-#                         if field_id not in metadata["order"]:
-#                             raise serializers.ValidationError(
-#                                 f"The {field_id} field is not defined in metadata order"
-#                             )
-#                         else:
-#                             field = Field.objects.get(id=field_id)
-#                             if field in self.instance.fields:
-#                                 raise serializers.ValidationError(
-#                                     "This field is already in use"
-#                                 )
-#             else:  # metadata['fields_update_mode'] == 'remove'
-#                 if "order" in metadata:
-#                     if len(metadata["order"]) != len(
-#                         self.instance.metadata["order"]
-#                     ) - len(self.initial_data["fields"]):
-#                         raise serializers.ValidationError(
-#                             "number of removing fields does not match with the number of fields given in order"
-#                         )
-#                     else:
-#                         for field_id in metadata["order"]:
-#                             if field_id not in self.instance.metadata["order"]:
-#                                 raise serializers.ValidationError(
-#                                     "The given order does not match with the remaining fields"
-#                                 )
-#                 else:
-#                     for field_id in self.initial_data["fields"]:
-#                         if field_id not in self.instance.metadata["order"]:
-#                             raise serializers.ValidationError(
-#                                 f"The given field {field_id} does not exist in fields"
-#                             )
-#         return data
-
-#     def create(self, validated_data):
-#         form = Form.objects.create(**validated_data)
-#         fields_id = self.initial_data["fields"]
-#         field_instances = []
-#         for field_id in fields_id:
-#             field_instances.append(Field.objects.get(pk=field_id))
-#         form.fields.set(field_instances)
-#         return form
-
-#     def update(self, instance, validated_data):
-#         metadata = validated_data.pop("metadata")
-#         instance = super(FormSerializer, self).update(instance, validated_data)
-#         fields_id = self.initial_data.get("fields", None)
-#         if fields_id:
-#             mode = metadata.pop("fields_update_mode")
-#             if mode == "remove":
-#                 for field_id in fields_id:
-#                     field = Field.objects.get(pk=field_id)
-#                     instance.fields.remove(field)
-#                     instance.metadata["order"].remove(field_id)
-#             elif mode == "add":
-#                 for field_id in fields_id:
-#                     field = Field.objects.get(pk=field_id)
-#                     instance.fields.add(field)
-#                 instance.metadata["order"] = metadata["order"]
-#         instance.save()
-#         return instance
-
-
 class PipelineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pipeline
         fields = "__all__"
         read_only_fields = [
             "owner",
+            "slug",
         ]
 
     def validate(self, attrs):
@@ -665,6 +554,10 @@ class PipelineSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user
+        random_slug = get_random_string(length=20)
+        while Pipeline.objects.filter(slug=random_slug).exists():
+            random_slug = get_random_string(length=20)
+        validated_data["slug"] = random_slug
         return super().create(validated_data)
 
     def update(self, instance: Pipeline, validated_data):

@@ -7,14 +7,16 @@ from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 
-from forms.models import Field, Form, Pipeline, Category
+from forms.models import Category, Field, Form, Pipeline
 from forms.serializers import (
+    CategorySerializer,
     FieldSerializer,
     FormSerializer,
     PipelineSerializer,
     UpdateFieldSerializer,
-    UpdateFormSerializer, CategorySerializer,
+    UpdateFormSerializer,
 )
 from permissions import IsOwnerOrReadOnly
 
@@ -97,8 +99,15 @@ class FormListView(ListAPIView):
     serializer_class = FormSerializer
 
     def get_queryset(self):
+        category = self.request.query_params.get("category")
         if self.request.user.is_admin:
+            if category is not None:
+                return Form.objects.filter(categories__name=category)
             return Form.objects.all()
+        if category is not None:
+            return Form.objects.filter(
+                owner__id=self.request.user.id, categories__name=category
+            )
         return Form.objects.filter(owner__id=self.request.user.id)
 
     @method_decorator(cache_page(60 * 60 * 2))
@@ -164,8 +173,15 @@ class PipelineListView(ListAPIView):
     serializer_class = PipelineSerializer
 
     def get_queryset(self):
+        category = self.request.query_params.get("category")
         if self.request.user.is_admin:
+            if category is not None:
+                return Pipeline.objects.filter(categories__name=category)
             return Pipeline.objects.all()
+        if category is not None:
+            return Pipeline.objects.filter(
+                owner__id=self.request.user.id, categories__name=category
+            )
         return Pipeline.objects.filter(owner__id=self.request.user.id)
 
     @method_decorator(cache_page(60 * 60 * 2))
@@ -228,26 +244,30 @@ class PipelineDeleteView(DestroyAPIView):
 class PipelineShareView(APIView):
     def get(self, request, pipeline_id):
         pipeline = Pipeline.objects.get(pk=pipeline_id)
-        if pipeline.hide_next_button: #pipeline is ordered
-            forms_id = pipeline.metadata['order']
+        if pipeline.hide_next_button:  # pipeline is ordered
+            forms_id = pipeline.metadata["order"]
             last_answered_form_id = None
-            for form_id in forms_id: #find last_answered_form_id by user
+            for form_id in forms_id:  # find last_answered_form_id by user
                 form = Form.objects.get(pk=form_id)
-                user_response = form.responses.filter(session_key=request.session.session_key).exists()
+                user_response = form.responses.filter(
+                    session_key=request.session.session_key
+                ).exists()
                 if user_response:
                     last_answered_form_id = form_id
-            if last_answered_form_id == forms_id[-1]:  #case user has completed survey
-                return Response('you have already answered', status=status.HTTP_400_BAD_REQUEST)
-            elif last_answered_form_id is None: #case user has not answered yet
+            if last_answered_form_id == forms_id[-1]:  # case user has completed survey
+                return Response(
+                    "you have already answered", status=status.HTTP_400_BAD_REQUEST
+                )
+            elif last_answered_form_id is None:  # case user has not answered yet
                 form = Form.objects.get(pk=forms_id[0])
-                serializer = FormSerializer(instance=form, context={'request': request})
+                serializer = FormSerializer(instance=form, context={"request": request})
                 return Response(serializer.data, status=status.HTTP_200_OK)
-            else: #case still there is still forms for user to answer
+            else:  # case still there is still forms for user to answer
                 index = forms_id.index(last_answered_form_id)
-                form = Form.objects.get(pk=forms_id[index+1])
-                serializer = FormSerializer(instance=form, context={'request': request})
+                form = Form.objects.get(pk=forms_id[index + 1])
+                serializer = FormSerializer(instance=form, context={"request": request})
                 return Response(serializer.data, status=status.HTTP_200_OK)
-        else: #case the pipeline is not ordered
+        else:  # case the pipeline is not ordered
             serializer = PipelineSerializer(instance=pipeline)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -264,7 +284,7 @@ class CategoryCreateView(APIView):
 
 
 class CategoryUpdateView(APIView):
-    permission_classes = (IsOwnerOrReadOnly, )
+    permission_classes = (IsOwnerOrReadOnly,)
 
     def put(self, request, category_id):
         category = get_object_or_404(Category, pk=category_id)
@@ -298,8 +318,8 @@ class CategoryListView(ListAPIView):
 class CategoryDataView(RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = CategorySerializer
-    lookup_url_kwarg = 'category_id'
-    lookup_field = 'pk'
+    lookup_url_kwarg = "category_id"
+    lookup_field = "pk"
 
     def get_queryset(self):
         return Category.objects.filter(owner__id=self.request.user.id)
@@ -312,8 +332,8 @@ class CategoryDataView(RetrieveAPIView):
 
 class CategoryDeleteView(DestroyAPIView):
     permission_classes = (IsAuthenticated,)
-    lookup_url_kwarg = 'category_id'
-    lookup_field = 'pk'
+    lookup_url_kwarg = "category_id"
+    lookup_field = "pk"
 
     def get_queryset(self):
         return Category.objects.filter(owner__id=self.request.user.id)

@@ -196,3 +196,30 @@ class PipelineDeleteView(APIView):
         pipeline = Pipeline.objects.get(pk=pipeline_id)
         pipeline.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PipelineShareView(APIView):
+    def get(self, request, pipeline_id):
+        pipeline = Pipeline.objects.get(pk=pipeline_id)
+        if pipeline.hide_next_button: #pipeline is ordered
+            forms_id = pipeline.metadata['order']
+            last_answered_form_id = None
+            for form_id in forms_id: #find last_answered_form_id by user
+                form = Form.objects.get(pk=form_id)
+                user_response = form.responses.filter(session_key=request.session.session_key).exists()
+                if user_response:
+                    last_answered_form_id = form_id
+            if last_answered_form_id == forms_id[-1]:  #case user has completed survey
+                return Response('you have already answered', status=status.HTTP_400_BAD_REQUEST)
+            elif last_answered_form_id is None: #case user has not answered yet
+                form = Form.objects.get(pk=forms_id[0])
+                serializer = FormSerializer(instance=form, context={'request': request})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else: #case still there is still forms for user to answer
+                index = forms_id.index(last_answered_form_id)
+                form = Form.objects.get(pk=forms_id[index+1])
+                serializer = FormSerializer(instance=form, context={'request': request})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        else: #case the pipeline is not ordered
+            serializer = PipelineSerializer(instance=pipeline)
+            return Response(serializer.data, status=status.HTTP_200_OK)

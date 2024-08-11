@@ -71,3 +71,13 @@ class Pipeline(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=250)
+    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    forms = models.ManyToManyField(Form, related_name="categories", blank=True, null=True)
+    pipelines = models.ManyToManyField(Pipeline, related_name="categories", blank=True, null=True)
+
+    def __str__(self):
+        return self.name

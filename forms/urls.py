@@ -35,6 +35,8 @@ pipline_urls = [
         views.PipelineDeleteView.as_view(),
         name="pipeline-delete",
     ),
+
+    path('share/<int:pipeline_id>', views.PipelineShareView.as_view(), name='pipeline-share'),
 ]
 
 urlpatterns = [

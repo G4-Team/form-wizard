@@ -15,10 +15,12 @@ class Response(models.Model):
     pipeline = models.ForeignKey(
         to=Pipeline,
         on_delete=models.CASCADE,
+        related_name='responses',
     )
     form = models.ForeignKey(
         to=Form,
         on_delete=models.CASCADE,
+        related_name='responses',
     )
     data = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)

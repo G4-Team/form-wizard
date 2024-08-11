@@ -71,6 +71,8 @@ class Pipeline(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
+    number_of_views = models.PositiveBigIntegerField(default=0)
+
 
 
 class Category(models.Model):
@@ -81,3 +83,4 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+

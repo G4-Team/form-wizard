@@ -10,17 +10,21 @@ class Response(models.Model):
         to=get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
     )
     session_key = models.CharField(max_length=40, null=True, blank=True)
     pipeline = models.ForeignKey(
         to=Pipeline,
         on_delete=models.CASCADE,
-        related_name='responses',
+        related_name="responses",
     )
     form = models.ForeignKey(
         to=Form,
         on_delete=models.CASCADE,
-        related_name='responses',
+        related_name="responses",
+    )
+    pipeline_submission = models.ForeignKey(
+        to="PipelineSubmission", on_delete=models.CASCADE
     )
     data = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)

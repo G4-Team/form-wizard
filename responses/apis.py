@@ -1,4 +1,7 @@
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,9 +40,9 @@ class UpdateResponseView(APIView):
         return Response(data=serializer.data)
 
 
-class ResponseRetriveApi(RetrieveAPIView):
+class ResponseRetrieveApi(RetrieveAPIView):
     lookup_field = "pk"
-    lookup_url_kwarg = "pipeline_sunbmission_id"
+    lookup_url_kwarg = "pipeline_submission_id"
     serializer_class = PipelineSubmissionSerializer
 
     def get_queryset(self):
@@ -53,3 +56,8 @@ class ResponseRetriveApi(RetrieveAPIView):
         return PipelineSubmission.objects.filter(
             session_key=self.request.session.session_key
         )
+
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)

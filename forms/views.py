@@ -122,17 +122,13 @@ class FormUpdateView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class FormDeleteView(APIView):
-    permission_classes = (IsOwnerOrReadOnly,)
+class FormDeleteView(DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    lookup_url_kwarg = "form_id"
+    lookup_field = "pk"
 
-    def delete(self, request, form_id):
-        form = Form.objects.get(pk=form_id)
-        self.check_object_permissions(request, form)
-        form.delete()
-        return Response(
-            data={"message": "form successfully deleted."},
-            status=status.HTTP_204_NO_CONTENT,
-        )
+    def get_queryset(self):
+        return Form.objects.filter(owner__id=self.request.user.id)
 
 
 # Pipeline API Views

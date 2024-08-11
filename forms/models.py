@@ -53,10 +53,14 @@ class Form(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
+    categories = models.ManyToManyField(to="Category", related_name="forms", blank=True)
 
 
 class Pipeline(models.Model):
     metadata = models.JSONField()
+    title = models.CharField(max_length=250)
+    slug = models.SlugField(max_length=20)
+    description_text = models.CharField(max_length=250)
     questions_responding_duration = models.PositiveBigIntegerField(
         help_text="Response duration time in minutes"
     )
@@ -72,15 +76,17 @@ class Pipeline(models.Model):
         null=True,
     )
     number_of_views = models.PositiveBigIntegerField(default=0)
+    categories = models.ManyToManyField(
+        to="Category", related_name="pipelines", blank=True
+    )
 
+    def __str__(self):
+        return f"{self.title} - {self.owner.email}"
 
 
 class Category(models.Model):
     name = models.CharField(max_length=250)
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    forms = models.ManyToManyField(Form, related_name="categories", blank=True, null=True)
-    pipelines = models.ManyToManyField(Pipeline, related_name="categories", blank=True, null=True)
 
     def __str__(self):
         return self.name
-

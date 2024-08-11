@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets
+from rest_framework import status
 from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveAPIView
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -115,7 +115,10 @@ class FormUpdateView(APIView):
         form = get_object_or_404(Form, pk=form_id)
         self.check_object_permissions(request, form)
         serializer = UpdateFormSerializer(
-            instance=form, data=request.data, partial=True
+            instance=form,
+            data=request.data,
+            partial=True,
+            context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()

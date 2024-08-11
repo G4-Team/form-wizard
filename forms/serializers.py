@@ -434,10 +434,14 @@ class FormSerializer(serializers.ModelSerializer):
                 "Order must have the same number of fields"
             )
 
-        for field_id in attrs["fields"]:
-            if field_id not in attrs["metadata"]["order"]:
+        for field in attrs["fields"]:
+            if field.id not in attrs["metadata"]["order"]:
                 raise serializers.ValidationError(
-                    f"The {field_id} field is not defined in metadata order"
+                    f"The {field.id} field is not defined in metadata order"
+                )
+            if field.owner.id != self.context["request"].user.id:
+                raise serializers.ValidationError(
+                    {"fields": f"we can't find a field with this id: {field.id}"}
                 )
         keys_to_keep = {
             "order",
@@ -483,6 +487,12 @@ class UpdateFormSerializer(serializers.ModelSerializer):
             if id not in metadata["order"]:
                 raise serializers.ValidationError(
                     f"The {id} field is not defined in metadata order"
+                )
+            if not Field.objects.filter(
+                id=id, owner__id=self.context["request"].user.id
+            ).exists():
+                raise serializers.ValidationError(
+                    {"fields": f"we can't find a field with this id: {id}"}
                 )
         keys_to_keep = {
             "order",

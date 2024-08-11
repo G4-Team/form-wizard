@@ -39,6 +39,15 @@ pipline_urls = [
     path('share/<int:pipeline_id>', views.PipelineShareView.as_view(), name='pipeline-share'),
 ]
 
+category_urls = [
+    path('', views.CategoryListView.as_view(), name='category-list'),
+    path('<int:category_id>', views.CategoryDataView.as_view(), name='category-data'),
+    path('add', views.CategoryCreateView.as_view(), name='category-add'),
+    path('update/<int:category_id>', views.CategoryUpdateView.as_view(), name='category-update'),
+    path('delete/<int:category_id>', views.CategoryDeleteView.as_view(), name='category-delete'),
+
+]
+
 urlpatterns = [
     path("", include(form_urls)),
     path("fields/", include(field_urls)),

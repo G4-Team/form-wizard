@@ -1,17 +1,20 @@
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
 from rest_framework import status
 from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from forms.models import Field, Form, Pipeline
+from forms.models import Field, Form, Pipeline, Category
 from forms.serializers import (
     FieldSerializer,
     FormSerializer,
     PipelineSerializer,
     UpdateFieldSerializer,
-    UpdateFormSerializer,
+    UpdateFormSerializer, CategorySerializer,
 )
 from permissions import IsOwnerOrReadOnly
 
@@ -20,6 +23,7 @@ from .models import COMMON_REGEX_TYPES
 
 # Field API Views
 class CommonRegexApi(APIView):
+    @method_decorator(cache_page(60 * 60 * 2))
     def get(self, request):
         return Response(data=COMMON_REGEX_TYPES)
 
@@ -33,6 +37,11 @@ class FieldListView(ListAPIView):
             return Field.objects.all()
         return Field.objects.filter(owner__id=self.request.user.id)
 
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
 
 class FieldDataView(RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
@@ -42,6 +51,11 @@ class FieldDataView(RetrieveAPIView):
 
     def get_queryset(self):
         return Field.objects.filter(owner__id=self.request.user.id)
+
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
 
 
 class FieldCreateView(APIView):
@@ -87,6 +101,11 @@ class FormListView(ListAPIView):
             return Form.objects.all()
         return Form.objects.filter(owner__id=self.request.user.id)
 
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
 
 class FormDataView(RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
@@ -96,6 +115,11 @@ class FormDataView(RetrieveAPIView):
 
     def get_queryset(self):
         return Form.objects.filter(owner__id=self.request.user.id)
+
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
 
 
 class FormCreateView(APIView):
@@ -144,6 +168,11 @@ class PipelineListView(ListAPIView):
             return Pipeline.objects.all()
         return Pipeline.objects.filter(owner__id=self.request.user.id)
 
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
 
 class PipelineDataView(RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
@@ -153,6 +182,11 @@ class PipelineDataView(RetrieveAPIView):
 
     def get_queryset(self):
         return Pipeline.objects.filter(owner__id=self.request.user.id)
+
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
 
 
 class PipelineCreateView(APIView):
@@ -217,3 +251,69 @@ class PipelineShareView(APIView):
             serializer = PipelineSerializer(instance=pipeline)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+# Category API Views
+class CategoryCreateView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CategoryUpdateView(APIView):
+    permission_classes = (IsOwnerOrReadOnly, )
+
+    def put(self, request, category_id):
+        category = get_object_or_404(Category, pk=category_id)
+        self.check_object_permissions(request, category)
+        serializer = CategorySerializer(
+            instance=category,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CategoryListView(ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+
+    def get_queryset(self):
+        if self.request.user.is_admin:
+            return Category.objects.all()
+        return Category.objects.filter(owner__id=self.request.user.id)
+
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
+
+class CategoryDataView(RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+    lookup_url_kwarg = 'category_id'
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        return Category.objects.filter(owner__id=self.request.user.id)
+
+    @method_decorator(cache_page(60 * 60 * 2))
+    @method_decorator(vary_on_cookie)
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
+
+class CategoryDeleteView(DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    lookup_url_kwarg = 'category_id'
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        return Category.objects.filter(owner__id=self.request.user.id)

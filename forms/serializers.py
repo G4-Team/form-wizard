@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from forms.models import Field, Form, Pipeline
+from forms.models import Field, Form, Pipeline, Category
 
 
 class FieldSerializer(serializers.ModelSerializer):
@@ -691,3 +691,16 @@ class PipelineSerializer(serializers.ModelSerializer):
             k: metadata[k] for k in keys_to_keep if k in metadata
         }
         return super().update(instance, validated_data)
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = "__all__"
+        read_only_fields = [
+            "owner",
+        ]
+
+    def create(self, validated_data):
+        validated_data["owner"] = self.context["request"].user
+        return super().create(validated_data)

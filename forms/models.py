@@ -72,3 +72,15 @@ class Pipeline(models.Model):
         null=True,
     )
     number_of_views = models.PositiveBigIntegerField(default=0)
+
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=250)
+    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    forms = models.ManyToManyField(Form, related_name="categories", blank=True, null=True)
+    pipelines = models.ManyToManyField(Pipeline, related_name="categories", blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+

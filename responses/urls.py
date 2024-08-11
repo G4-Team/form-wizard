@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .apis import AddResponseView, ResponseRetriveApi, UpdateResponseView
+from .apis import AddResponseView, ResponseRetrieveApi, UpdateResponseView
 
 app_name = "responses"
 
@@ -11,7 +11,7 @@ urlpatterns = [
     ),
     path(
         "list/<int:pipeline_sunbmission_id>",
-        ResponseRetriveApi.as_view(),
-        name="retrive-response",
+        ResponseRetrieveApi.as_view(),
+        name="retrieve-response",
     ),
 ]

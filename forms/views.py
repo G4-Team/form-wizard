@@ -34,13 +34,14 @@ class FieldListView(ListAPIView):
         return Field.objects.filter(owner__id=self.request.user.id)
 
 
-class FieldDataView(APIView):
-    permission_classes = (IsOwnerOrReadOnly,)
+class FieldDataView(RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = FieldSerializer
+    lookup_url_kwarg = "field_id"
+    lookup_field = "pk"
 
-    def get(self, request, field_id):
-        field = Field.objects.get(pk=field_id)
-        serializer = FieldSerializer(instance=field)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        return Field.objects.filter(owner__id=self.request.user.id)
 
 
 class FieldCreateView(APIView):
@@ -57,7 +58,7 @@ class FieldUpdateView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
 
     def put(self, request, field_id):
-        field = Field.objects.get(pk=field_id)
+        field = get_object_or_404(Field, pk=field_id)
         self.check_object_permissions(request, field)
         serializer = UpdateFieldSerializer(
             instance=field, data=request.data, partial=True
@@ -67,17 +68,13 @@ class FieldUpdateView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class FieldDeleteView(APIView):
-    permission_classes = (IsOwnerOrReadOnly,)
+class FieldDeleteView(DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    lookup_url_kwarg = "field_id"
+    lookup_field = "pk"
 
-    def delete(self, request, field_id):
-        field = Field.objects.get(pk=field_id)
-        self.check_object_permissions(request, field)
-        field.delete()
-        return Response(
-            data={"message": "field successfully deleted."},
-            status=status.HTTP_204_NO_CONTENT,
-        )
+    def get_queryset(self):
+        return Field.objects.filter(owner__id=self.request.user.id)
 
 
 # Form API Views

@@ -1,3 +1,5 @@
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
@@ -20,6 +22,15 @@ class AddResponseView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        channel_layer = get_channel_layer()
+        phone = serializer.validated_data["pipeline"].owner.phone
+        async_to_sync(channel_layer.group_send)(
+            f"report_{phone}",
+            {
+                "type": "form_response",
+                "message": f"New response submitted: {serializer.data}",
+            },
+        )
         return Response(data=serializer.data)
 
 

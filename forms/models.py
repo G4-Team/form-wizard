@@ -71,3 +71,4 @@ class Pipeline(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
+    number_of_views = models.PositiveBigIntegerField(default=0)

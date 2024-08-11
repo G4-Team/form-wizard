@@ -299,25 +299,7 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                             },
                         }
                     )
-            case (
-                Field.TYPES.TXT_INPUT_IP
-                | Field.TYPES.TXT_INPUT_TIME
-                | Field.TYPES.TXT_INPUT_EMAIL
-            ):
-                if not isinstance(response, str):
-                    raise serializers.ValidationError(
-                        {
-                            "data": {field.slug: "The answer should be a string."},
-                        }
-                    )
-                regex_value = field.metadata["regex_value"]
-                if not re.match(regex_value, response):
-                    raise serializers.ValidationError(
-                        {
-                            "data": {field.slug: field.error_message},
-                        }
-                    )
-            case Field.TYPES.TXT_INPUT_FR, Field.TYPES.TXT_INPUT_ENG:
+            case Field.TYPES.SHORT_TXT_INPUT:
                 if not isinstance(response, str):
                     raise serializers.ValidationError(
                         {
@@ -349,46 +331,6 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                             "data": {field.slug: field.error_message},
                         }
                     )
-            case Field.TYPES.TXT_INPUT_NUMBERS:
-                if not isinstance(response, str):
-                    raise serializers.ValidationError(
-                        {
-                            "data": {field.slug: "The answer should be a string."},
-                        }
-                    )
-                regex_value = field.metadata["regex_value"]
-                if not re.match(regex_value, response):
-                    raise serializers.ValidationError(
-                        {
-                            "data": {field.slug: field.error_message},
-                        }
-                    )
-                try:
-                    response = int(response)
-                except ValueError:
-                    raise serializers.ValidationError(
-                        {
-                            "data": {field.slug: "Wrong int number."},
-                        }
-                    )
-                if response > number_max_value:
-                    raise serializers.ValidationError(
-                        {
-                            "data": {
-                                field.slug: f"The answer should less than {number_max_value}."
-                            },
-                        }
-                    )
-                number_min_value = field.metadata["number_min_value"]
-                if response < number_min_value:
-                    raise serializers.ValidationError(
-                        {
-                            "data": {
-                                field.slug: f"The answer should greater than {number_min_value}."
-                            },
-                        }
-                    )
-
 
 
 class ResponseUpdateSerializer(serializers.ModelSerializer):

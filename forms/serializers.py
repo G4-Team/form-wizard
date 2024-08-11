@@ -203,7 +203,7 @@ class FieldSerializer(serializers.ModelSerializer):
                 }
                 filtered_dict = {k: metadata[k] for k in keys_to_keep if k in metadata}
                 data["metadata"] = filtered_dict
-        return data
+        return super().validate(data)
 
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user
@@ -439,7 +439,13 @@ class FormSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f"The {field_id} field is not defined in metadata order"
                 )
-
+        keys_to_keep = {
+            "order",
+        }
+        filtered_dict = {
+            k: attrs["metadata"][k] for k in keys_to_keep if k in attrs["metadata"]
+        }
+        attrs["metadata"] = filtered_dict
         return super().validate(attrs)
 
     def create(self, validated_data):
@@ -478,7 +484,12 @@ class UpdateFormSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f"The {id} field is not defined in metadata order"
                 )
-
+        keys_to_keep = {
+            "order",
+        }
+        validated_data["metadata"] = {
+            k: metadata[k] for k in keys_to_keep if k in metadata
+        }
         return super().update(instance, validated_data)
 
 

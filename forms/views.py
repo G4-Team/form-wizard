@@ -91,13 +91,14 @@ class FormListView(ListAPIView):
         return Form.objects.filter(owner__id=self.request.user.id)
 
 
-class FormDataView(APIView):
-    permission_classes = (IsOwnerOrReadOnly,)
+class FormDataView(RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = FormSerializer
+    lookup_url_kwarg = "form_id"
+    lookup_field = "pk"
 
-    def get(self, request, form_id):
-        form = Form.objects.get(pk=form_id)
-        serializer = FormSerializer(instance=form)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        return Form.objects.filter(owner__id=self.request.user.id)
 
 
 class FormCreateView(APIView):
@@ -114,7 +115,7 @@ class FormUpdateView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
 
     def put(self, request, form_id):
-        form = Form.objects.get(pk=form_id)
+        form = get_object_or_404(Form, pk=form_id)
         self.check_object_permissions(request, form)
         serializer = UpdateFormSerializer(
             instance=form, data=request.data, partial=True
@@ -149,7 +150,7 @@ class PipelineListView(ListAPIView):
 
 
 class PipelineDataView(RetrieveAPIView):
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (IsAuthenticated,)
     serializer_class = PipelineSerializer
     lookup_url_kwarg = "pipeline_id"
     lookup_field = "pk"

@@ -5,13 +5,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from forms.models import Field, Form, Pipeline
+from forms.models import Field, Form, Pipeline, Category
 from forms.serializers import (
     FieldSerializer,
     FormSerializer,
     PipelineSerializer,
     UpdateFieldSerializer,
-    UpdateFormSerializer,
+    UpdateFormSerializer, CategorySerializer,
 )
 from permissions import IsOwnerOrReadOnly
 
@@ -217,3 +217,59 @@ class PipelineShareView(APIView):
             serializer = PipelineSerializer(instance=pipeline)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+# Category API Views
+class CategoryCreateView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CategoryUpdateView(APIView):
+    permission_classes = (IsOwnerOrReadOnly, )
+
+    def put(self, request, category_id):
+        category = get_object_or_404(Category, pk=category_id)
+        self.check_object_permissions(request, category)
+        serializer = CategorySerializer(
+            instance=category,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CategoryListView(ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+
+    def get_queryset(self):
+        if self.request.user.is_admin:
+            return Category.objects.all()
+        return Category.objects.filter(owner__id=self.request.user.id)
+
+
+class CategoryDataView(RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CategorySerializer
+    lookup_url_kwarg = 'category_id'
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        return Category.objects.filter(owner__id=self.request.user.id)
+
+
+class CategoryDeleteView(DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    lookup_url_kwarg = 'category_id'
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        return Category.objects.filter(owner__id=self.request.user.id)

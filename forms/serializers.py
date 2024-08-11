@@ -196,6 +196,14 @@ class FieldSerializer(serializers.ModelSerializer):
                             }
                         }
                     )
+                if len(metadata["choices"]) < metadata["max_selectable_choices"]:
+                    raise serializers.ValidationError(
+                        {
+                            "metadata": {
+                                "choices": "number of choices must greater than equal max_selectable_choices"
+                            }
+                        }
+                    )
                 keys_to_keep = {
                     "min_selectable_choices",
                     "max_selectable_choices",

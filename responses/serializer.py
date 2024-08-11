@@ -21,6 +21,7 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
             "updated_at",
             "session_key",
             "owner",
+            "pipeline_submission",
         ]
 
     def validate_pipeline(self, pipeline: Pipeline):
@@ -57,6 +58,7 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                     {"password": "password is incorrect."}
                 )
 
+        if "password" in attrs:
             attrs.pop("password")
 
         form: Form = attrs["form"]
@@ -94,23 +96,24 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
         data = attrs["data"]
         for field in fields:
             if field.answer_required:
-                if str(field.id) not in data.keys():
+                if field.slug not in data.keys():
                     raise serializers.ValidationError(
                         {
                             "data": {field.slug: "This field is required."},
                         }
                     )
-            resp = data.get(str(field.id), None)
+            resp = data.get(field.slug, None)
             if resp is not None:
                 ResponseWriteSerializer.field_validation(
                     field=field,
                     response=resp,
                 )
-        ids = [id[0] for id in fields.values_list("id")]
-        for id in list(data):
-            if int(id) not in ids:
-                data.pop(id)
 
+        keys_to_keep = [id[0] for id in fields.values_list("slug")]
+        filtered_dict = {
+            k: attrs["data"][k] for k in keys_to_keep if k in attrs["data"]
+        }
+        attrs["data"] = filtered_dict
         return attrs
 
     def create(self, validated_data):
@@ -217,7 +220,7 @@ class ResponseWriteSerializer(serializers.ModelSerializer):
                 pipeline_submission.is_completed = True
                 pipeline_submission.save()
             validated_data["session_key"] = self.context["request"].session.session_key
-
+        validated_data["pipeline_submission"] = pipeline_submission
         return super().create(validated_data)
 
     @staticmethod
@@ -378,21 +381,29 @@ class ResponseUpdateSerializer(serializers.ModelSerializer):
                 }
             )
         fields: QuerySet[Field] = instance.form.fields.all()
-        update_validated_data = validated_data["data"]
+        update_validated_data = validated_data.get("data", instance.data)
         for field in fields:
             if field.answer_required:
-                if str(field.id) not in update_validated_data.keys():
+                if field.slug not in update_validated_data.keys():
                     raise serializers.ValidationError(
                         {
-                            "data": {field.slug: "This field is required."},
+                            "data": {{field.slug}: "This field is required."},
                         }
                     )
-            resp = update_validated_data.get(str(field.id), None)
+            resp = update_validated_data.get(field.slug, None)
             if resp is not None:
                 ResponseWriteSerializer.field_validation(
                     field=field,
                     response=resp,
                 )
+
+        keys_to_keep = [id[0] for id in fields.values_list("slug")]
+        filtered_dict = {
+            k: update_validated_data[k]
+            for k in keys_to_keep
+            if k in update_validated_data
+        }
+        validated_data["data"] = filtered_dict
 
         return super().update(instance, validated_data)
 

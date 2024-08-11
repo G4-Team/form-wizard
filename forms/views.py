@@ -1,5 +1,6 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -137,32 +138,24 @@ class FormDeleteView(APIView):
 
 
 # Pipeline API Views
-class AllPipelineListView(APIView):
+class PipelineListView(ListAPIView):
     permission_classes = (IsAuthenticated,)
+    serializer_class = PipelineSerializer
 
-    def get(self, request):
-        pipeline = Pipeline.objects.all()
-        serializer = PipelineSerializer(instance=pipeline, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class PipelineListView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request):
-        user = request.user
-        pipelines = Pipeline.objects.filter(owner=user)
-        serializer = PipelineSerializer(instance=pipelines, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        if self.request.user.is_admin:
+            return Pipeline.objects.all()
+        return Pipeline.objects.filter(owner__id=self.request.user.id)
 
 
-class PipelineDataView(APIView):
+class PipelineDataView(RetrieveAPIView):
     permission_classes = (IsOwnerOrReadOnly,)
+    serializer_class = PipelineSerializer
+    lookup_url_kwarg = "pipeline_id"
+    lookup_field = "pk"
 
-    def get(self, request, pipeline_id):
-        pipeline = Pipeline.objects.get(pk=pipeline_id)
-        serializer = PipelineSerializer(instance=pipeline)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        return Pipeline.objects.filter(owner__id=self.request.user.id)
 
 
 class PipelineCreateView(APIView):
@@ -170,31 +163,32 @@ class PipelineCreateView(APIView):
 
     def post(self, request):
         serializer = PipelineSerializer(data=request.data, context={"request": request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class PipelineUpdateView(APIView):
     permission_classes = (IsOwnerOrReadOnly,)
 
     def put(self, request, pipeline_id):
-        pipeline = Pipeline.objects.get(pk=pipeline_id)
+        pipeline = get_object_or_404(Pipeline, pk=pipeline_id)
         self.check_object_permissions(request, pipeline)
         serializer = PipelineSerializer(
-            instance=pipeline, data=request.data, partial=True
+            instance=pipeline,
+            data=request.data,
+            partial=True,
+            context={"request": request},
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class PipelineDeleteView(APIView):
-    permission_classes = (IsOwnerOrReadOnly,)
+class PipelineDeleteView(DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    lookup_url_kwarg = "pipeline_id"
+    lookup_field = "pk"
 
-    def delete(self, request, pipeline_id):
-        pipeline = Pipeline.objects.get(pk=pipeline_id)
-        pipeline.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def get_queryset(self):
+        return Pipeline.objects.filter(owner__id=self.request.user.id)

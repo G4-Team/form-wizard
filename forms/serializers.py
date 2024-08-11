@@ -600,30 +600,65 @@ class PipelineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pipeline
         fields = "__all__"
+        read_only_fields = [
+            "owner",
+        ]
 
-    def validate_metadata(self, value):
-        if "order" not in value:
-            raise serializers.ValidationError("Order must be defined in metadata")
+    def validate(self, attrs):
+        if "is_private" in attrs and attrs["is_private"] is True:
+            if "password" not in attrs:
+                raise serializers.ValidationError(
+                    {"password": "This field is required"}
+                )
+        return super().validate(attrs)
 
-    def validate_owner(self, value):
-        if value != self.context["request"].user:
-            raise serializers.ValidationError("you are not the owner")
+    def validate_metadata(self, metadata):
+        if "order" not in metadata or not isinstance(metadata["order"], list):
+            raise serializers.ValidationError(
+                {
+                    "metadata": {
+                        "order": "Order must be defined in metadata [as a list]."
+                    }
+                }
+            )
+        for id in metadata["order"]:
+            if not Form.objects.filter(
+                id=id, owner__id=self.context["request"].user.id
+            ).exists():
+                raise serializers.ValidationError(
+                    {"metadata": {"order": f"we can't find a form with this id: {id}"}}
+                )
+        keys_to_keep = {
+            "order",
+        }
+        filtered_dict = {k: metadata[k] for k in keys_to_keep if k in metadata}
+        return filtered_dict
 
     def create(self, validated_data):
-        pipeline = Pipeline.objects.create(**validated_data)
-        form_id = self.initial_data["forms"]
-        form_instance = [Form.objects.get(pk=int(form_id))]
-        pipeline.forms.set(form_instance)
-        return pipeline
+        validated_data["owner"] = self.context["request"].user
+        return super().create(validated_data)
 
-    def update(self, instance, validated_data):
-        instance = super(PipelineSerializer, self).update(instance, validated_data)
-        form = self.initial_data.get("forms", None)
-        if form:
-            form_id = form["id"]
-            forms = Form.objects.get(pk=form_id)
-            if self.initial_data["remove"]:
-                instance.forms.remove(forms)
-            else:
-                instance.forms.add(forms)
-        return instance
+    def update(self, instance: Pipeline, validated_data):
+        metadata = validated_data.get("metadata", instance.metadata)
+        if "order" not in metadata or not isinstance(metadata["order"], list):
+            raise serializers.ValidationError(
+                {
+                    "metadata": {
+                        "order": "Order must be defined in metadata [as a list]."
+                    }
+                }
+            )
+        for id in metadata["order"]:
+            if not Form.objects.filter(
+                id=id, owner__id=self.context["request"].user.id
+            ).exists():
+                raise serializers.ValidationError(
+                    {"metadata": {"order": f"we can't find a form with this id: {id}"}}
+                )
+        keys_to_keep = {
+            "order",
+        }
+        validated_data["metadata"] = {
+            k: metadata[k] for k in keys_to_keep if k in metadata
+        }
+        return super().update(instance, validated_data)

@@ -19,14 +19,14 @@ def web_socket_report_when_save_response(
     phone = instance.pipeline.owner.phone
     if created:
         async_to_sync(channel_layer.group_send)(
-            f"report_{phone}",
+            f"report_{phone}_{instance.pipeline.id}",
             {
                 "type": "form_response",
                 "message": "A new response submitted",
             },
         )
         async_to_sync(channel_layer.group_send)(
-            f"report_{phone}",
+            f"report_{phone}_{instance.pipeline.id}",
             {
                 "type": "form_response",
                 "message": create_new_report(instance.pipeline),
@@ -34,14 +34,14 @@ def web_socket_report_when_save_response(
         )
     else:
         async_to_sync(channel_layer.group_send)(
-            f"report_{phone}",
+            f"report_{phone}_{instance.pipeline.id}",
             {
                 "type": "form_response",
                 "message": "A response updated",
             },
         )
         async_to_sync(channel_layer.group_send)(
-            f"report_{phone}",
+            f"report_{phone}_{instance.pipeline.id}",
             {
                 "type": "form_response",
                 "message": create_new_report(instance.pipeline),
@@ -58,14 +58,14 @@ def web_socket_report_when_delete_response(
     channel_layer = get_channel_layer()
     phone = instance.pipeline.owner.phone
     async_to_sync(channel_layer.group_send)(
-        f"report_{phone}",
+        f"report_{phone}_{instance.pipeline.id}",
         {
             "type": "form_response",
             "message": "A response deleted",
         },
     )
     async_to_sync(channel_layer.group_send)(
-        f"report_{phone}",
+        f"report_{phone}_{instance.pipeline.id}",
         {
             "type": "form_response",
             "message": create_new_report(instance.pipeline),

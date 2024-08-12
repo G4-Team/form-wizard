@@ -36,9 +36,9 @@ pipline_urls = [
         name="pipeline-delete",
     ),
     path(
-        "share/<int:pipeline_id>",
+        "show/<slug:pipeline_slug>",
         views.PipelineShareView.as_view(),
-        name="pipeline-share",
+        name="pipeline-show",
     ),
 ]
 

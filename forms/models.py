@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.urls import reverse
 
 COMMON_REGEX_TYPES = {
     "english characters": "^[a-zA-Z ]*$",
@@ -79,6 +80,9 @@ class Pipeline(models.Model):
     categories = models.ManyToManyField(
         to="Category", related_name="pipelines", blank=True
     )
+
+    def get_absolute_url(self):
+        return reverse("api:forms:pipeline-show", kwargs={"pipeline_slug": self.slug})
 
     def __str__(self):
         return f"{self.title} - {self.owner.email}"

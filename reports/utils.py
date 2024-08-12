@@ -70,7 +70,8 @@ def create_new_report(pipeline: Pipeline) -> dict:
                 total = sum([k for k in perc.values()])
 
                 for key, value in perc.items():
-                    RESPNSES[form.title][field.slug][key] = f"{value*100/total}%"
+                    if total != 0:
+                        RESPNSES[form.title][field.slug][key] = f"{value*100/total}%"
 
     output["responses"] = RESPNSES
 

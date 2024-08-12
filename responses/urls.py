@@ -10,7 +10,7 @@ urlpatterns = [
         "update/<int:response_id>", UpdateResponseView.as_view(), name="update-response"
     ),
     path(
-        "list/<int:pipeline_sunbmission_id>",
+        "list/<int:pipeline_submission_id>",
         ResponseRetrieveApi.as_view(),
         name="retrieve-response",
     ),

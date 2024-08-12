@@ -1,3 +1,4 @@
+from django.core.mail import send_mail
 from django.db.models import Avg, Max, Min
 from django.db.models.fields.json import KT
 
@@ -152,3 +153,17 @@ async def acreate_new_report(pipeline: Pipeline) -> dict:
     output["responses"] = RESPNSES
 
     return output
+
+
+def send_email(subject: str, message: str, receiver: str):
+    subject = subject
+    message = message
+    sender = "dctrxspprt@gmail.com"
+    receiver = receiver
+    send_mail(
+        subject,
+        message,
+        sender,
+        receiver,
+        fail_silently=False,
+    )

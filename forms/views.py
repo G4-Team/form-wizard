@@ -1,3 +1,4 @@
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -39,7 +40,6 @@ class FieldListView(ListAPIView):
         if self.request.user.is_admin:
             return Field.objects.all()
         return Field.objects.filter(owner__id=self.request.user.id)
-
 
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
@@ -288,6 +288,8 @@ class PipelineShareView(RetrieveAPIView):
                 raise ValidationError({"password": "The password is incorrect."})
 
         self.check_object_permissions(self.request, obj)
+        obj.number_of_views = F("number_of_views") + 1
+        obj.save()
         return obj
 
     def get_queryset(self):

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from forms.models import Category, Field, Form, Pipeline
+from responses.models import PipelineSubmission
 
 from .utils import get_random_string
 
@@ -514,13 +515,19 @@ class UpdateFormSerializer(serializers.ModelSerializer):
 
 
 class PipelineSerializer(serializers.ModelSerializer):
+    share_link = serializers.SerializerMethodField()
+
     class Meta:
         model = Pipeline
         fields = "__all__"
         read_only_fields = [
             "owner",
             "slug",
+            "share_link",
         ]
+
+    def get_share_link(self, obj: Pipeline):
+        return obj.get_absolute_url()
 
     def validate(self, attrs):
         if "is_private" in attrs and attrs["is_private"] is True:
@@ -586,7 +593,94 @@ class PipelineSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class PipelineShowSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+    forms = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Pipeline
+        exclude = ("password",)
+        read_only_fields = (
+            "id",
+            "title",
+            "slug",
+            "description_text",
+            "metadata",
+            "questions_responding_duration",
+            "start_datetime",
+            "stop_datetime",
+            "hide_previous_button",
+            "hide_next_button",
+            "is_private",
+            "owner",
+            "number_of_views",
+            "categories",
+        )
+        depth = 2
+
+    def get_owner(self, obj: Pipeline):
+        return obj.owner.email
+
+    def get_forms(self, obj: Pipeline):
+        form_ids = None
+        OUTPUT = {}
+        if obj.hide_next_button:
+            if self.context["request"].user.is_authenticated:
+                submission = PipelineSubmission.objects.filter(
+                    pipeline__id=obj.id, owner__id=self.context["request"].user.id
+                )
+                if submission.exists():
+                    form_ids = submission[0].responses["responsed_forms"]
+                    last_index = obj.metadata["order"].index(form_ids[-1])
+                    if len(obj.metadata["order"]) > last_index + 1:
+                        form_ids.append(obj.metadata["order"][last_index + 1])
+                else:
+                    form_ids = obj.metadata["order"][:1]
+            else:
+                if self.context["request"].session.session_key is None:
+                    self.context["request"].session.create()
+                session_key = self.context["request"].session.session_key
+                submission = PipelineSubmission.objects.filter(
+                    pipeline__id=obj.id, session_key=session_key
+                )
+                if submission.exists():
+                    form_ids = submission[0].responses["responsed_forms"]
+                    last_index = obj.metadata["order"].index(form_ids[-1])
+                    if len(obj.metadata["order"]) > last_index + 1:
+                        form_ids.append(obj.metadata["order"][last_index + 1])
+                else:
+                    form_ids = obj.metadata["order"][:1]
+        else:
+            form_ids = obj.metadata["order"]
+
+        for form_id in form_ids:
+            form: Form = Form.objects.get(pk=form_id)
+            OUTPUT[str(form.id)] = {}
+            OUTPUT[str(form.id)]["metadata"] = form.metadata
+            OUTPUT[str(form.id)]["title"] = form.title
+
+            OUTPUT[str(form.id)]["fields"] = {}
+            for field in form.fields.all():
+                OUTPUT[str(form.id)]["fields"][str(field.id)] = {}
+                OUTPUT[str(form.id)]["fields"][str(field.id)]["title"] = field.title
+                OUTPUT[str(form.id)]["fields"][str(field.id)]["slug"] = field.slug
+                OUTPUT[str(form.id)]["fields"][str(field.id)][
+                    "metadata"
+                ] = field.metadata
+                OUTPUT[str(form.id)]["fields"][str(field.id)][
+                    "description_text"
+                ] = field.description_text
+                OUTPUT[str(form.id)]["fields"][str(field.id)]["type"] = field.type
+                OUTPUT[str(form.id)]["fields"][str(field.id)][
+                    "answer_required"
+                ] = field.answer_required
+                OUTPUT[str(form.id)]["fields"][str(field.id)][
+                    "error_message"
+                ] = field.error_message
+        return OUTPUT
+
+
+class CategorySerializer(serializers.ModelField):
     class Meta:
         model = Category
         fields = "__all__"

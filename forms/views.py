@@ -2,12 +2,12 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_cookie
-from rest_framework import status
+from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
 
 from forms.models import Category, Field, Form, Pipeline
 from forms.serializers import (
@@ -15,6 +15,7 @@ from forms.serializers import (
     FieldSerializer,
     FormSerializer,
     PipelineSerializer,
+    PipelineShowSerializer,
     UpdateFieldSerializer,
     UpdateFormSerializer,
 )
@@ -241,35 +242,65 @@ class PipelineDeleteView(DestroyAPIView):
         return Pipeline.objects.filter(owner__id=self.request.user.id)
 
 
-class PipelineShareView(APIView):
-    def get(self, request, pipeline_id):
-        pipeline = Pipeline.objects.get(pk=pipeline_id)
-        if pipeline.hide_next_button:  # pipeline is ordered
-            forms_id = pipeline.metadata["order"]
-            last_answered_form_id = None
-            for form_id in forms_id:  # find last_answered_form_id by user
-                form = Form.objects.get(pk=form_id)
-                user_response = form.responses.filter(
-                    session_key=request.session.session_key
-                ).exists()
-                if user_response:
-                    last_answered_form_id = form_id
-            if last_answered_form_id == forms_id[-1]:  # case user has completed survey
-                return Response(
-                    "you have already answered", status=status.HTTP_400_BAD_REQUEST
-                )
-            elif last_answered_form_id is None:  # case user has not answered yet
-                form = Form.objects.get(pk=forms_id[0])
-                serializer = FormSerializer(instance=form, context={"request": request})
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:  # case still there is still forms for user to answer
-                index = forms_id.index(last_answered_form_id)
-                form = Form.objects.get(pk=forms_id[index + 1])
-                serializer = FormSerializer(instance=form, context={"request": request})
-                return Response(serializer.data, status=status.HTTP_200_OK)
-        else:  # case the pipeline is not ordered
-            serializer = PipelineSerializer(instance=pipeline)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+# class PipelineShareView(APIView):
+#     def get(self, request, pipeline_id):
+#         pipeline = Pipeline.objects.get(pk=pipeline_id)
+#         if pipeline.hide_next_button:  # pipeline is ordered
+#             forms_id = pipeline.metadata["order"]
+#             last_answered_form_id = None
+#             for form_id in forms_id:  # find last_answered_form_id by user
+#                 form = Form.objects.get(pk=form_id)
+#                 user_response = form.responses.filter(
+#                     session_key=request.session.session_key
+#                 ).exists()
+#                 if user_response:
+#                     last_answered_form_id = form_id
+#             if last_answered_form_id == forms_id[-1]:  # case user has completed survey
+#                 return Response(
+#                     "you have already answered", status=status.HTTP_400_BAD_REQUEST
+#                 )
+#             elif last_answered_form_id is None:  # case user has not answered yet
+#                 form = Form.objects.get(pk=forms_id[0])
+#                 serializer = FormSerializer(instance=form, context={"request": request})
+#                 return Response(serializer.data, status=status.HTTP_200_OK)
+#             else:  # case still there is still forms for user to answer
+#                 index = forms_id.index(last_answered_form_id)
+#                 form = Form.objects.get(pk=forms_id[index + 1])
+#                 serializer = FormSerializer(instance=form, context={"request": request})
+#                 return Response(serializer.data, status=status.HTTP_200_OK)
+#         else:  # case the pipeline is not ordered
+#             serializer = PipelineSerializer(instance=pipeline)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+class PipelineShareView(RetrieveAPIView):
+    serializer_class = PipelineShowSerializer
+    lookup_url_kwarg = "pipeline_slug"
+    lookup_field = "slug"
+
+    class InputSerializer(serializers.Serializer):
+        password = serializers.CharField(required=True)
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg
+        filter_kwargs = {
+            self.lookup_field: self.kwargs[lookup_url_kwarg],
+        }
+        obj: Pipeline = get_object_or_404(queryset, **filter_kwargs)
+        if obj.is_private:
+            serializer = self.InputSerializer(data=self.request.data)
+            serializer.is_valid(raise_exception=True)
+            if obj.password != serializer.validated_data["password"]:
+                raise ValidationError({"password": "The password is incorrect."})
+
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get_queryset(self):
+        return Pipeline.objects.all()
+
+    def get(self, request, *args, **kwargs):
+
+        return super().get(request, *args, **kwargs)
 
 
 # Category API Views

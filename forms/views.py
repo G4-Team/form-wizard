@@ -40,7 +40,7 @@ class FieldListView(ListAPIView):
             return Field.objects.all()
         return Field.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
+
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -55,7 +55,6 @@ class FieldDataView(RetrieveAPIView):
     def get_queryset(self):
         return Field.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -111,7 +110,6 @@ class FormListView(ListAPIView):
             )
         return Form.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -126,7 +124,6 @@ class FormDataView(RetrieveAPIView):
     def get_queryset(self):
         return Form.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -185,7 +182,6 @@ class PipelineListView(ListAPIView):
             )
         return Pipeline.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -200,7 +196,6 @@ class PipelineDataView(RetrieveAPIView):
     def get_queryset(self):
         return Pipeline.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -340,7 +335,6 @@ class CategoryListView(ListAPIView):
             return Category.objects.all()
         return Category.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
@@ -355,7 +349,6 @@ class CategoryDataView(RetrieveAPIView):
     def get_queryset(self):
         return Category.objects.filter(owner__id=self.request.user.id)
 
-    @method_decorator(cache_page(60 * 60 * 2))
     @method_decorator(vary_on_cookie)
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)

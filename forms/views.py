@@ -1,8 +1,10 @@
 from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.views import View
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_cookie
+from django.core.mail import send_mail
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveAPIView
@@ -363,3 +365,18 @@ class CategoryDeleteView(DestroyAPIView):
 
     def get_queryset(self):
         return Category.objects.filter(owner__id=self.request.user.id)
+
+
+class MailView(View):
+    def get(self, request):
+        subject = 'email subject'
+        message = 'email message'
+        sender = 'dctrxspprt@gmail.com'
+        receiver = '<EMAIL>'
+        send_mail(
+            subject,
+            message,
+            sender,
+            receiver,
+            fail_silently=False,
+        )

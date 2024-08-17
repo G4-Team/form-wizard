@@ -1,7 +1,8 @@
+from django.db.models.fields.json import KT
 from rest_framework import serializers
 
 from forms.models import Category, Field, Form, Pipeline
-from responses.models import PipelineSubmission
+from responses.models import PipelineSubmission, Response
 
 from .utils import get_random_string
 
@@ -230,6 +231,15 @@ class UpdateFieldSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance: Field, validated_data):
+
+        if "type" in validated_data:
+            if validated_data["type"] != instance.type:
+                if len(instance.forms.all()) != 0:
+                    raise serializers.ValidationError(
+                        {
+                            "type": "You can't change the type of this field because it's part of existing forms."
+                        }
+                    )
         field_type = validated_data.get("type", instance.type)
         metadata = validated_data.get("metadata", instance.metadata)
         match field_type:
@@ -478,6 +488,7 @@ class UpdateFormSerializer(serializers.ModelSerializer):
 
     def update(self, instance: Form, validated_data):
         metadata = validated_data.get("metadata", instance.metadata)
+
         fields = validated_data.get("fields", instance.fields.all())
         if "order" not in metadata or not isinstance(metadata["order"], list):
             raise serializers.ValidationError(
@@ -487,6 +498,23 @@ class UpdateFormSerializer(serializers.ModelSerializer):
                     }
                 }
             )
+        if "metadata" in validated_data:
+            if "order" in validated_data["metadata"]:
+                if set(validated_data["metadata"]["order"]) != set(
+                    instance.metadata["order"]
+                ):
+                    if (
+                        Pipeline.objects.annotate(order=KT("metadata__order"))
+                        .filter(order__contains=instance.id)
+                        .exists()
+                    ):
+                        raise serializers.ValidationError(
+                            {
+                                "metadata": {
+                                    "order": "You can't delete or add some fields because it's part of existing pipelines. you can only change order of fields"
+                                }
+                            }
+                        )
 
         if len(metadata["order"]) != len(fields):
             raise serializers.ValidationError(
@@ -569,6 +597,16 @@ class PipelineSerializer(serializers.ModelSerializer):
 
     def update(self, instance: Pipeline, validated_data):
         metadata = validated_data.get("metadata", instance.metadata)
+        if "metadata" in validated_data:
+            if "order" in validated_data["metadata"]:
+                if validated_data["metadata"]["order"] != instance.metadata["order"]:
+                    if Response.objects.filter(pipeline__id=instance.id).exists():
+                        raise serializers.ValidationError(
+                            {
+                                "metadata": "You can't change the metadata of this pipeline because there is at least one submitted response for it."
+                            }
+                        )
+
         if "order" not in metadata or not isinstance(metadata["order"], list):
             raise serializers.ValidationError(
                 {
@@ -577,6 +615,7 @@ class PipelineSerializer(serializers.ModelSerializer):
                     }
                 }
             )
+
         for id in metadata["order"]:
             if not Form.objects.filter(
                 id=id, owner__id=self.context["request"].user.id

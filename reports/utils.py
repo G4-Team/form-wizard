@@ -108,7 +108,7 @@ async def acreate_new_report(pipeline: Pipeline) -> dict:
                 annotation = {}
                 annotation[f"field_{field.id}"] = KT(f"data__{field.slug}")
                 RESPNSES[form.title][field.slug] = {}
-                agg = await (
+                agg = (
                     await Response.objects.annotate(**annotation)
                     .filter(
                         pipeline__id=pipeline.id,

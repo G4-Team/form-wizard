@@ -1,9 +1,14 @@
 from django.contrib import admin
 
+from .models import Category, Field, Form, Pipeline
 
-from .models import Field, Form, Pipline
+
+@admin.register(Pipeline)
+class PipelineAdmin(admin.ModelAdmin):
+    list_display = ("title", "owner", "id")
+
 
 admin.site.register(Field)
 admin.site.register(Form)
-admin.site.register(Pipline)
 
+admin.site.register(Category)

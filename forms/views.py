@@ -1,4 +1,5 @@
 from django.db.models import F
+from django.db.models.fields.json import KT
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -90,6 +91,23 @@ class FieldDeleteView(DestroyAPIView):
     lookup_url_kwarg = "field_id"
     lookup_field = "pk"
 
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        obj: Field = get_object_or_404(queryset, **filter_kwargs)
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+
+        if len(obj.forms.all()) != 0:
+            raise ValidationError(
+                {
+                    "message": "You can't delete this field because it's part of existing forms."
+                }
+            )
+        return obj
+
     def get_queryset(self):
         return Field.objects.filter(owner__id=self.request.user.id)
 
@@ -161,6 +179,27 @@ class FormDeleteView(DestroyAPIView):
     permission_classes = (IsAuthenticated,)
     lookup_url_kwarg = "form_id"
     lookup_field = "pk"
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        obj: Form = get_object_or_404(queryset, **filter_kwargs)
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+
+        if (
+            Pipeline.objects.annotate(order=KT("metadata__order"))
+            .filter(order__contains=self.kwargs[lookup_url_kwarg])
+            .exists()
+        ):
+            raise ValidationError(
+                {
+                    "message": "You can't delete this form because it's part of existing pipelines."
+                }
+            )
+        return obj
 
     def get_queryset(self):
         return Form.objects.filter(owner__id=self.request.user.id)
@@ -291,14 +330,11 @@ class PipelineShareView(RetrieveAPIView):
         self.check_object_permissions(self.request, obj)
         obj.number_of_views = F("number_of_views") + 1
         obj.save()
+        obj.refresh_from_db()
         return obj
 
     def get_queryset(self):
         return Pipeline.objects.all()
-
-    def get(self, request, *args, **kwargs):
-
-        return super().get(request, *args, **kwargs)
 
 
 # Category API Views
